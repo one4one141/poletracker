@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pole Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1a59ad">
+<title>Pole Test Tracker</title>
+<style>
+:root{
+  --bg:#ffffff; --card:#f2f2f7; --card2:#e5e5ea; --text:#111; --sub:#6b6b73; --line:#d8d8de;
+  --brand:#1a59ad; --brand2:#2e8cd1; --green:#229e47; --orange:#db800d; --red:#d13333; --purple:#8a2be2; --grey:#8e8e93;
+  --tab:#f9f9fb; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#000;--card:#1c1c1e;--card2:#2c2c2e;--text:#f2f2f7;--sub:#9a9aa1;--line:#38383a;--tab:#111113;--brand:#4a90e2;--brand2:#3b9be0;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#000;--card:#1c1c1e;--card2:#2c2c2e;--text:#f2f2f7;--sub:#9a9aa1;--line:#38383a;--tab:#111113;--brand:#4a90e2;--brand2:#3b9be0;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{max-width:600px;margin:0 auto;min-height:100vh}
+main{padding:calc(14px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
+h1{font-size:30px;margin:6px 0 16px;letter-spacing:-.5px}
+h2{font-size:20px;margin:0 0 10px}
+h3{font-size:16px;margin:0 0 8px}
+.sub{color:var(--sub)} .small{font-size:12px} .mono{font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;align-items:center;gap:10px} .between{justify-content:space-between} .grow{flex:1}
+.card{background:var(--card);border-radius:14px;padding:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.metric .v{font-size:20px;font-weight:700;white-space:nowrap}
+.metric .t{font-size:12px;color:var(--sub)} .metric .i{font-size:16px;color:var(--brand)}
+.hero{width:100%;border:0;border-radius:18px;padding:18px;color:#fff;text-align:left;background:linear-gradient(90deg,var(--brand),var(--brand2));display:flex;align-items:center;gap:14px}
+.hero .big{font-size:34px;line-height:1} .hero b{display:block;font-size:17px} .hero span{opacity:.85;font-size:14px}
+.link{width:100%;border:0;text-align:left;background:var(--card);border-radius:15px;padding:14px;display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.link .ic{width:42px;height:42px;border-radius:11px;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);display:grid;place-items:center;font-size:20px}
+.link b{display:block} .link .chev{margin-left:auto;color:var(--sub)}
+.banner{background:color-mix(in srgb,var(--orange) 16%,var(--card));border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.banner button{white-space:nowrap}
+.btn{border:0;background:var(--card2);border-radius:10px;padding:9px 14px;font-weight:600}
+.btn.primary{background:var(--brand);color:#fff} .btn.danger{color:var(--red)} .btn.block{width:100%;padding:13px}
+.btn[disabled]{opacity:.45}
+.iconbtn{border:0;background:none;color:var(--brand);font-size:26px;width:44px;height:44px}
+.weeknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:var(--brand)}
+.weeknav .c{text-align:center;color:var(--text)} .weeknav .c b{display:block;font-size:17px}
+.day{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:13px;margin-bottom:8px;width:100%;border:0;text-align:left}
+.day .r{margin-left:auto;text-align:right} .day .clear{border:0;background:none;color:var(--red);padding:6px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--tab);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.tabbar-in{display:flex;width:100%;max-width:600px}
+.tab{flex:1;border:0;background:none;padding:8px 0 7px;color:var(--grey);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px}
+.tab .e{font-size:21px;line-height:1} .tab.on{color:var(--brand)}
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:40;overflow:auto;-webkit-overflow-scrolling:touch}
+.sheet-in{max-width:600px;margin:0 auto}
+.sheet-head{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;z-index:2}
+.sheet-head b{font-size:17px} .sheet-head button{border:0;background:none;color:var(--brand);font-size:17px;padding:8px}
+.sheet-body{padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
+label.field{display:block;background:var(--card);border-radius:12px;padding:12px}
+label.field span{display:block;font-size:12px;color:var(--sub);margin-bottom:6px}
+input[type=text],input[type=number],input[type=time],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;font-size:17px}
+textarea{min-height:110px;resize:vertical}
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{appearance:none;-webkit-appearance:none;width:51px;height:31px;border-radius:16px;background:var(--card2);margin:0;position:relative;outline:0;transition:.2s;border:0}
+.switch input:after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:.2s}
+.switch input:checked{background:var(--brand)} .switch input:checked:after{left:22px}
+.switch.ot input:checked{background:var(--purple)}
+.tile{border-radius:12px;background:var(--card);padding:12px;display:flex;flex-direction:column;gap:8px;min-height:84px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.tile.sel{background:var(--brand);color:#fff}
+.tile .name{font-weight:600;font-size:15px;border:0;background:none;text-align:left;padding:0;color:inherit;flex:1}
+.tile .min{font-size:12px;opacity:.75}
+.tile .step{display:flex;align-items:center;gap:8px}
+.tile .step button{flex:1;min-height:48px;border:0;border-radius:10px;background:rgba(255,255,255,.25);color:#fff;font-size:22px;font-weight:700}
+.tile .step b{min-width:34px;text-align:center;font-size:22px}
+.chip{border:0;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);border-radius:99px;padding:7px 12px;font-weight:500}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal .wd{text-align:center;font-size:12px;font-weight:600;color:var(--sub)}
+.cell{position:relative;border:0;border-radius:10px;min-height:54px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px}
+.cell b{font-size:15px} .cell i{font-style:normal;font-size:10px;font-weight:500}
+.cell.worked{background:var(--brand2);color:#fff} .cell.ot{background:var(--purple);color:#fff} .cell.off{background:var(--grey);color:#fff}
+.cell.today{outline:2px solid var(--text);outline-offset:-2px}
+.cell .dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.cell.worked .dot,.cell.ot .dot,.cell.off .dot{background:#fff}
+.cell.blank{background:none;pointer-events:none}
+.legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.list-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.list-row:last-child{border-bottom:0}
+.sect{background:var(--card);border-radius:14px;padding:4px 14px 8px;margin-bottom:6px}
+.sect-h{font-size:13px;text-transform:uppercase;color:var(--sub);margin:18px 6px 6px}
+.sect-f{font-size:13px;color:var(--sub);margin:4px 6px 14px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(66px + env(safe-area-inset-bottom));max-width:568px;margin:0 auto;z-index:60;background:var(--card2);border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;gap:12px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.toast button{border:0;background:none;color:var(--brand);font-weight:700}
+.menu-back{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:70;display:flex;align-items:flex-end;justify-content:center}
+.menu{background:var(--card);width:100%;max-width:600px;border-radius:16px 16px 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+.paper-wrap{background:var(--card2);border-radius:10px;padding:8px;overflow:hidden}
+.paper{background:#fff;color:#111;border-radius:6px;padding:14px;font-size:11px;zoom:.62;width:612px;max-width:none}
+.paper *{color:inherit}
+.rp h1{font-size:22px;margin:0 0 4px;color:#111} .rp .gr{color:#666}
+.rp .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.rp .tile2{background:#f2f2f2;border-radius:8px;padding:8px 10px;min-height:46px}
+.rp .tile2 small{display:block;font-size:8px;font-weight:600;color:#666;text-transform:uppercase}
+.rp .tile2 b{font-size:16px}
+.rp .dayh{background:#1a59ad;color:#fff!important;border-radius:4px;padding:5px 8px;display:flex;justify-content:space-between;font-weight:700;font-size:12px;margin-top:12px}
+.rp .dayh *{color:#fff!important}
+.rp .pill{background:#fff;border-radius:9px;padding:0 8px}
+.rp table{width:100%;border-collapse:collapse;margin:6px 0} .rp th{text-align:left;font-size:11px;padding:3px 5px} .rp td{padding:3px 5px;font-size:11px}
+.rp tr:nth-child(even) td{background:#f2f2f2}
+.rp .sec{break-inside:avoid;page-break-inside:avoid}
+.rp .note{font-style:italic;margin:4px 5px}
+.rp .foot{margin-top:14px;font-size:9px;color:#666}
+#printRoot{display:none}
+@media print{
+  html,body{background:#fff!important}
+  #app,.toast,.menu-back{display:none!important}
+  #printRoot{display:block}
+  #printRoot .rp{font-size:11px;color:#111;background:#fff}
+  @page{margin:14mm}
+}
+svg text{fill:var(--sub);font-size:10px}
+.paper svg text{fill:#555}
+.hide{display:none!important}
+.err{color:var(--red)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="printRoot"></div>
+<input type="file" id="fileIn" accept=".zip,.json,application/zip,application/json" class="hide">
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------ config & data */
+const LS = 'poleTrackerV1';
+const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
+const TYPES = [
+  ['Stage 1',23],['Stage 1A',45],['Stage 2',60],['Stage 3',80],
+  ['Request Stage 1A',95],['Request Stage 2',114],['Request Stage 3',133],
+  ['Recovered',23],['Modified/Add Record',23],['Incomplete Test',23],
+  ['Pole Repaired',98],['PIDOC TNC DEP',45],['Request Test D',114],['Total Poles Visit (No Test)',23]
+].map(([name, minutes]) => ({ name, minutes, countsAsPole: true }));
+const typeNamed = n => TYPES.find(t => t.name === n);
+
+const DEFAULTS = {
+  target: 100, amber: 85, lunch: 40, appearance: 'system', reportName: '', reportRoute: '',
+  includeComments: true, calcStart: 480, calcEnd: 1020, calcLunch: false,
+  reminder: false, reminderMin: 1020, lastBackup: 0
+};
+
+let S = load();
+function load() {
+  try {
+    const r = JSON.parse(localStorage.getItem(LS) || 'null');
+    if (r && r.days) return { days: r.days, settings: { ...DEFAULTS, ...(r.settings || {}) } };
+  } catch (e) {}
+  return { days: {}, settings: { ...DEFAULTS } };
+}
+function save() {
+  try { localStorage.setItem(LS, JSON.stringify(S)); }
+  catch (e) { flash('Could not save: browser storage is full or blocked.'); }
+}
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+/* ------------------------------------------------------------------ helpers */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => { const x = sod(d); x.setDate(x.getDate() + n); return x; };
+const fmt = (d, o) => d.toLocaleDateString('en-GB', o);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); })).toUpperCase();
+const hrs = (h, d = 1) => Number(h).toFixed(d);
+const pct = p => p == null ? '—' : (p * 100).toFixed(1) + '%';
+const target = () => Math.max(1, S.settings.target) / 100;
+const amber = () => Math.min(Math.max(0, S.settings.amber) / 100, target());
+const perfVar = p => p == null ? 'var(--sub)' : p >= target() ? 'var(--green)' : p >= amber() ? 'var(--orange)' : 'var(--red)';
+const perfHex = p => p == null ? '#737373' : p >= target() ? '#219e47' : p >= amber() ? '#db800d' : '#d13333';
+const hhmm = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const toMin = s => { const [h, m] = (s || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+const weekdayShort = d => fmt(d, { weekday: 'short' });
+const dm = d => fmt(d, { day: 'numeric', month: 'short' });
+
+/* ------------------------------------------------------------------ day maths */
+const actMin = a => a.minutesEach ?? typeNamed(a.typeName)?.minutes ?? 0;
+const actBudget = a => actMin(a) * a.quantity / 60;
+const actPoles = a => ((a.countsAsPole ?? typeNamed(a.typeName)?.countsAsPole ?? true) ? a.quantity : 0);
+const netH = d => d.actualHours - d.downtimeHours;
+const budgetH = d => d.activities.reduce((s, a) => s + actBudget(a), 0);
+const polesOf = d => d.activities.reduce((s, a) => s + actPoles(a), 0);
+const perfOf = d => (!d.isDayOff && netH(d) > 0) ? budgetH(d) / netH(d) : null;
+const hasData = d => !!d && (d.isDayOff || d.actualHours > 0 || d.activities.length > 0);
+const rec = date => S.days[dayKey(date)] || null;
+const recDate = r => parseKey(r.key);
+
+function weekStart(d) {
+  const x = sod(d);
+  x.setDate(x.getDate() - ((x.getDay() - WEEK_START_DOW + 7) % 7));
+  return x;
+}
+const weekDates = d => { const s = weekStart(d); return [...Array(7)].map((_, i) => addDays(s, i)); };
+const weekTitle = d => { const w = weekDates(d); return `${dm(w[0])} – ${dm(w[6])}`; };
+function weeklySummary(d) {
+  let budget = 0, net = 0, poles = 0;
+  weekDates(d).forEach(x => { const r = rec(x); if (r) { budget += budgetH(r); net += netH(r); poles += polesOf(r); } });
+  return { poles, budget, net, perf: net > 0 ? budget / net : null };
+}
+const dailyPerf = d => weekDates(d).map(x => ({ date: x, value: rec(x) ? perfOf(rec(x)) : null }));
+function weeklyTrend(weeks, end = new Date()) {
+  const cur = weekStart(end), pts = [];
+  for (let o = weeks - 1; o >= 0; o--) {
+    const s = addDays(cur, -7 * o), p = weeklySummary(s).perf;
+    if (p != null) pts.push({ date: s, value: p });
+  }
+  return pts;
+}
+function previousWork(before) {
+  const s = sod(before);
+  return Object.values(S.days).filter(r => recDate(r) < s && !r.isDayOff && r.activities.length).sort((a, b) => a.key < b.key ? 1 : -1)[0] || null;
+}
+function recentTypes(limit = 5) {
+  const cutoff = addDays(new Date(), -60), c = {};
+  Object.values(S.days).forEach(r => { if (recDate(r) >= cutoff) r.activities.forEach(a => { c[a.typeName] = (c[a.typeName] || 0) + a.quantity; }); });
+  return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([n]) => typeNamed(n)).filter(Boolean);
+}
+
+/* ------------------------------------------------------------------ mutations */
+function mkDay(key, o = {}) {
+  return { id: uuid(), key, actualHours: 0, downtimeHours: 0, activities: [], isDayOff: false, isOvertime: false, comments: null, ...o };
+}
+function saveDay(key, o) {
+  const old = S.days[key];
+  S.days[key] = mkDay(key, { id: old?.id || uuid(), ...o });
+  save();
+}
+function setDiary(key, overtime, notes) {
+  const r = S.days[key];
+  if (r) { r.isOvertime = overtime && !r.isDayOff; r.comments = notes; }
+  else if (overtime || notes) S.days[key] = mkDay(key, { isOvertime: overtime, comments: notes });
+  save();
+}
+function setWorkingHours(key, hours) {
+  const h = Math.max(0, hours), r = S.days[key];
+  if (r) { r.actualHours = h; r.isDayOff = false; r.downtimeHours = Math.min(r.downtimeHours, h); }
+  else S.days[key] = mkDay(key, { actualHours: h });
+  save();
+}
+let undoTimer = null;
+function deleteDay(key) {
+  const r = S.days[key]; if (!r) return;
+  delete S.days[key]; save();
+  V.toast = { msg: `Deleted ${fmt(parseKey(key), { weekday: 'short', day: 'numeric', month: 'short' })}`, undo: r };
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { V.toast = null; render(); }, 8000);
+}
+function undoDelete() {
+  const r = V.toast && V.toast.undo;
+  clearTimeout(undoTimer); V.toast = null;
+  if (r && !S.days[r.key]) { S.days[r.key] = r; save(); }
+  render();
+}
+function flash(msg) { V.toast = { msg }; clearTimeout(undoTimer); undoTimer = setTimeout(() => { V.toast = null; render(); }, 3500); render(); }
+
+/* ------------------------------------------------------------------ CSV */
+function csvFor(dates, withComments) {
+  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const lines = ['Date,Day Off,Overtime,Working Hours,Downtime Hours,Net Hours,Activity,Quantity,Minutes Each,Budget Hours' + (withComments ? ',Comments' : '')];
+  dates.forEach(date => {
+    const r = rec(date); if (!r) return;
+    const k = dayKey(date), tail = withComments ? [q(r.comments || '')] : [];
+    if (!r.activities.length) {
+      lines.push([k, r.isDayOff ? 'Yes' : 'No', r.isOvertime && !r.isDayOff ? 'Yes' : 'No', hrs(r.actualHours, 2), hrs(r.downtimeHours, 2), hrs(netH(r), 2), '', '', '', '', ...tail].join(','));
+    } else r.activities.forEach(a => {
+      lines.push([k, 'No', r.isOvertime ? 'Yes' : 'No', hrs(r.actualHours, 2), hrs(r.downtimeHours, 2), hrs(netH(r), 2), q(a.typeName), a.quantity, hrs(actMin(a), 0), hrs(actBudget(a), 2), ...tail].join(','));
+    });
+  });
+  return lines.join('\n');
+}
+
+/* ------------------------------------------------------------------ charts (inline SVG) */
+function barChart(items, h = 150) {
+  const W = 340, top = 18, bot = 20, plotH = h - top - bot;
+  const vals = items.map(i => i.value).filter(v => v != null);
+  const max = Math.max(target() * 1.15, ...vals.map(v => v * 1.1));
+  const slot = W / items.length, bw = Math.min(slot * .55, 44);
+  const y = v => top + plotH - (v / max) * plotH;
+  let s = `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Performance chart">`;
+  s += `<line x1="0" x2="${W}" y1="${y(target())}" y2="${y(target())}" stroke="#8e8e93" stroke-dasharray="4 3" stroke-width="1"/>`;
+  s += `<text x="${W - 2}" y="${y(target()) - 3}" text-anchor="end" style="font-size:9px">${Math.round(target() * 100)}%</text>`;
+  s += `<line x1="0" x2="${W}" y1="${top + plotH}" y2="${top + plotH}" stroke="#8e8e93" stroke-opacity=".5"/>`;
+  items.forEach((it, i) => {
+    const cx = slot * i + slot / 2;
+    if (it.value != null) {
+      const bh = Math.max(2, top + plotH - y(it.value));
+      s += `<rect x="${cx - bw / 2}" y="${top + plotH - bh}" width="${bw}" height="${bh}" rx="3" fill="${perfHex(it.value)}"/>`;
+      s += `<text x="${cx}" y="${top + plotH - bh - 4}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:${perfHex(it.value)}">${(it.value * 100).toFixed(0)}%</text>`;
+    }
+    s += `<text x="${cx}" y="${h - 6}" text-anchor="middle">${esc(it.label)}</text>`;
+  });
+  return s + '</svg>';
+}
+function lineChart(points, h = 150) {
+  const W = 340, L = 6, R = 6, top = 14, bot = 20, plotH = h - top - bot;
+  const vals = points.map(p => p.value);
+  const max = Math.max(target() * 1.15, ...vals.map(v => v * 1.05)), min = Math.min(0, ...vals);
+  const y = v => top + plotH - ((v - min) / (max - min)) * plotH;
+  const x = i => L + (points.length === 1 ? (W - L - R) / 2 : i * ((W - L - R) / (points.length - 1)));
+  let s = `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Weekly trend">`;
+  s += `<line x1="0" x2="${W}" y1="${y(target())}" y2="${y(target())}" stroke="#8e8e93" stroke-dasharray="4 3"/>`;
+  s += `<polyline fill="none" stroke="#2e8cd1" stroke-width="2" points="${points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}"/>`;
+  points.forEach((p, i) => {
+    s += `<circle cx="${x(i)}" cy="${y(p.value)}" r="4" fill="${perfHex(p.value)}"/>`;
+    s += `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" style="font-size:9px">${esc(fmt(p.date, { day: 'numeric', month: 'short' }))}</text>`;
+  });
+  return s + '</svg>';
+}
+
+/* ------------------------------------------------------------------ view state */
+const today = () => sod(new Date());
+const V = {
+  tab: 'home', sub: null,
+  weekDate: new Date(), exportDate: new Date(), month: new Date(today().getFullYear(), today().getMonth(), 1),
+  editor: null, diaryDay: null, menu: null, toast: null, calcCopied: false, calcApplied: false
+};
+
+/* ------------------------------------------------------------------ small components */
+const metric = (t, v, icon, color) => `<div class="card metric"><div class="i">${icon}</div><div class="v mono" style="color:${color || 'inherit'}">${v}</div><div class="t">${t}</div></div>`;
+const weekMetrics = s => `<div class="grid3">${metric('Total Poles', s.poles, '📡')}${metric('Net Hours', hrs(s.net), '⏱')}${metric('Performance', pct(s.perf), '📈', perfVar(s.perf))}</div>`;
+const chartCard = (t, inner) => `<div class="card"><h3>${t}</h3>${inner}</div>`;
+const sw = (id, checked, cls = '') => `<span class="switch ${cls}"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''}></span>`;
+
+/* ------------------------------------------------------------------ views */
+function reminderDue() {
+  const s = S.settings, now = new Date(), r = rec(now);
+  if (!s.reminder) return false;
+  const dow = now.getDay();
+  if (dow === 0 || dow === 6) return false;
+  if (now.getHours() * 60 + now.getMinutes() < s.reminderMin) return false;
+  return !(r && (r.isDayOff || r.actualHours > 0));
+}
+function homeView() {
+  const t = today(), r = rec(t), s = weeklySummary(new Date());
+  const daily = dailyPerf(new Date()), trend = weeklyTrend(8);
+  const needBackup = Object.keys(S.days).length > 0 && Date.now() - S.settings.lastBackup > 14 * 864e5;
+  return `<h1>Pole Test Tracker</h1><div class="stack">
+    ${reminderDue() ? `<div class="banner"><span>🔔 Don't forget to enter today's work.</span><button class="btn" data-act="enter-today">Enter</button></div>` : ''}
+    <button class="hero" data-act="enter-today"><span class="big">⊕</span><div><b>${hasData(r) ? "Update today's work" : "Enter today's work"}</b><span>${fmt(t, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div><span style="margin-left:auto">›</span></button>
+    <div><h2>This week</h2>${weekMetrics(s)}</div>
+    ${daily.some(d => d.value != null) ? chartCard('Daily performance', barChart(daily.map(d => ({ label: weekdayShort(d.date).charAt(0), value: d.value })))) : ''}
+    ${trend.length >= 2 ? chartCard('Weekly trend (8 weeks)', lineChart(trend)) : ''}
+    <div><h2>Quick access</h2>
+      <button class="link" data-act="tab" data-tab="week"><span class="ic">📅</span><div><b>View this week</b><span class="sub small">See daily totals and performance</span></div><span class="chev">›</span></button>
+      <button class="link" data-act="tab" data-tab="export"><span class="ic">⬆︎</span><div><b>Export a week</b><span class="sub small">Create a PDF or CSV to share</span></div><span class="chev">›</span></button>
+    </div>
+    ${needBackup ? `<div class="banner"><span>💾 It's been a while since your last backup. Your data lives on this device only.</span><button class="btn" data-act="tab" data-tab="settings">Back up</button></div>` : ''}
+  </div>`;
+}
+
+function weekView() {
+  const d = V.weekDate, s = weeklySummary(d), dates = weekDates(d), daily = dailyPerf(d);
+  return `<h1>Week</h1>
+  <div class="weeknav"><button class="iconbtn" data-act="week" data-n="-1">‹</button><div class="c"><b>${weekTitle(d)}</b><span class="sub small">Thursday – Wednesday</span></div><button class="iconbtn" data-act="week" data-n="1">›</button></div>
+  <div class="stack">
+    <div class="row between"><span></span><button class="btn" data-act="week-today">Today</button></div>
+    ${weekMetrics(s)}
+    ${daily.some(x => x.value != null) ? chartCard('Daily performance', barChart(daily.map(x => ({ label: weekdayShort(x.date).charAt(0), value: x.value })), 110)) : ''}
+    <div>${dates.map(date => dayRow(date)).join('')}</div>
+  </div>`;
+}
+function dayRow(date) {
+  const r = rec(date), k = dayKey(date);
+  let right;
+  if (r && r.isDayOff) right = `<b class="sub">Day Off</b>`;
+  else if (r && (r.actualHours > 0 || r.activities.length)) right = `<div><b>${polesOf(r)} poles</b> <b class="mono" style="color:${perfVar(perfOf(r))}">${pct(perfOf(r))}</b><div class="small sub">${hrs(netH(r))} net hrs</div></div>`;
+  else right = `<span class="sub">Not entered</span>`;
+  return `<div class="day" data-act="edit" data-key="${k}" role="button"><div><b>${fmt(date, { weekday: 'long' })}</b><div class="sub small">${dm(date)}</div></div><div class="r">${right}</div>${hasData(r) ? `<button class="clear" data-act="clear" data-key="${k}" aria-label="Clear day">🗑</button>` : ''}<span class="sub">›</span></div>`;
+}
+
+/* -------- diary */
+function diaryView() {
+  const m = V.month, y = m.getFullYear(), mo = m.getMonth();
+  const blanks = (m.getDay() - 1 + 7) % 7, count = new Date(y, mo + 1, 0).getDate();
+  const recs = Object.values(S.days).filter(r => { const d = recDate(r); return d.getFullYear() === y && d.getMonth() === mo; });
+  const worked = recs.filter(r => !r.isDayOff && (r.actualHours > 0 || r.activities.length));
+  const monthHours = worked.reduce((s, r) => s + r.actualHours, 0);
+  const monthOT = recs.filter(r => r.isOvertime && !r.isDayOff).length;
+  const totalOT = Object.values(S.days).filter(r => r.isOvertime && !r.isDayOff).length;
+  const noted = recs.filter(r => r.comments).sort((a, b) => a.key < b.key ? -1 : 1);
+  const kind = r => !r ? '' : r.isDayOff ? 'off' : r.isOvertime ? 'ot' : (r.actualHours > 0 || r.activities.length) ? 'worked' : '';
+  let cells = '';
+  for (let i = 0; i < blanks; i++) cells += '<div class="cell blank"></div>';
+  for (let d = 1; d <= count; d++) {
+    const date = new Date(y, mo, d), r = rec(date), k = kind(r);
+    const lab = k === 'off' ? 'Off' : (k === 'worked' || k === 'ot') ? (r.actualHours > 0 ? Number(r.actualHours.toFixed(2)) + 'h' : 'OT') : '&nbsp;';
+    cells += `<button class="cell ${k} ${dayKey(date) === dayKey(today()) ? 'today' : ''}" data-act="diary-day" data-key="${dayKey(date)}"><b>${d}</b><i>${lab}</i>${r && r.comments ? '<span class="dot"></span>' : ''}</button>`;
+  }
+  const isCur = m.getFullYear() === today().getFullYear() && m.getMonth() === today().getMonth();
+  return `<h1>Diary</h1><div class="stack">
+    <div class="row between"><button class="iconbtn" data-act="month" data-n="-1">‹</button><div style="text-align:center"><h2 style="margin:0">${fmt(m, { month: 'long', year: 'numeric' })}</h2>${isCur ? '' : '<button class="btn" style="margin-top:6px;padding:4px 10px" data-act="month-today">Today</button>'}</div><button class="iconbtn" data-act="month" data-n="1">›</button></div>
+    <div class="cal">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<div class="wd">${x}</div>`).join('')}${cells}</div>
+    <div class="legend"><span><i style="background:var(--brand2)"></i>Worked</span><span><i style="background:var(--purple)"></i>Overtime</span><span><i style="background:var(--grey)"></i>Day off</span><span><i style="background:var(--brand);border-radius:50%;width:7px;height:7px"></i>Note</span></div>
+    <div class="grid3">
+      <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--brand2)">${worked.length}</div><div class="small sub">Days worked</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--brand2)">${Number(monthHours.toFixed(2))}</div><div class="small sub">Hours</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--purple)">${monthOT}</div><div class="small sub">Overtime days</div></div>
+    </div>
+    <div class="small sub" style="text-align:center">Overtime days in total: ${totalOT}</div>
+    ${noted.length ? `<div><h3>Notes this month</h3>${noted.map(r => `<button class="day" data-act="diary-day" data-key="${r.key}" style="display:block"><b>${fmt(recDate(r), { weekday: 'short', day: 'numeric', month: 'short' })}</b><div class="sub" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(r.comments)}</div></button>`).join('')}</div>` : ''}
+  </div>`;
+}
+function diaryDaySheet() {
+  const dd = V.diaryDay, date = parseKey(dd.key), r = S.days[dd.key];
+  let info;
+  if (r && r.isDayOff) info = '<div>🌙 Day off</div>';
+  else if (r && (r.actualHours > 0 || r.activities.length)) info = `
+    <div class="list-row"><span>Hours worked</span><b>${hrs(r.actualHours, 2)}</b></div>
+    <div class="list-row"><span>Net hours</span><b>${hrs(netH(r), 2)}</b></div>
+    <div class="list-row"><span>Poles</span><b>${polesOf(r)}</b></div>
+    <div class="list-row"><span>Performance</span><b style="color:${perfVar(perfOf(r))}">${pct(perfOf(r))}</b></div>`;
+  else info = '<span class="sub">No work logged for this day.</span>';
+  return `<div class="sheet"><div class="sheet-in">
+    <div class="sheet-head"><button data-act="diary-cancel">Cancel</button><b>${fmt(date, { weekday: 'long', day: 'numeric', month: 'long' })}</b><button data-act="diary-save"><b>Save</b></button></div>
+    <div class="sheet-body stack">
+      <div class="card">${info}<div style="margin-top:10px"><button class="btn" data-act="diary-edit">✎ ${r ? 'Edit' : 'Add'} hours &amp; pole work</button></div></div>
+      <div class="card row between"><div><b>Overtime day</b><div class="small sub">Shown in purple on the calendar and counted in totals.</div></div><span class="switch ot"><input type="checkbox" id="ddOT" ${dd.overtime ? 'checked' : ''} ${r && r.isDayOff ? 'disabled' : ''}></span></div>
+      <div><h3>Notes</h3><textarea id="ddNotes" style="min-height:140px">${esc(dd.notes)}</textarea></div>
+    </div></div></div>`;
+}
+
+/* -------- editor */
+function newEditor(key) {
+  const r = S.days[key];
+  const e = {
+    key, dayOff: r?.isDayOff || false, overtime: r?.isOvertime || false,
+    working: r && r.actualHours ? String(r.actualHours) : '', down: r && r.downtimeHours ? String(r.downtimeHours) : '',
+    comments: r?.comments || '', qty: {}, tUsed: false
+  };
+  (r?.activities || []).forEach(a => { e.qty[a.typeName] = (e.qty[a.typeName] || 0) + a.quantity; });
+  e.initial = edSig(e);
+  return e;
+}
+const edSig = e => JSON.stringify([e.dayOff, e.overtime, e.working, e.down, e.comments, e.qty]);
+const parseNum = t => { const c = String(t).trim().replace(',', '.'); if (!c) return 0; const n = Number(c); return isNaN(n) ? null : n; };
+const edDraftBudget = e => TYPES.reduce((s, t) => s + t.minutes * (e.qty[t.name] || 0) / 60, 0);
+const edNet = e => (parseNum(e.working) || 0) - (parseNum(e.down) || 0);
+const edPerf = e => { const n = edNet(e); return n > 0 ? edDraftBudget(e) / n : null; };
+const edPoles = e => TYPES.reduce((s, t) => s + (t.countsAsPole ? (e.qty[t.name] || 0) : 0), 0);
+
+function needCard(e) {
+  const net = edNet(e), tp = Math.round(target() * 100), p = edPerf(e);
+  const rem = target() * net * 60 - edDraftBudget(e) * 60;
+  let body;
+  if (net <= 0) body = `<div class="sub">Enter your working hours above to see how much pole work you need to reach ${tp}%.</div>`;
+  else if (rem <= 0.0001) { const ahead = Math.round(-rem); body = `<b style="color:var(--green)">✔ ${ahead >= 1 ? `You've reached ${tp}%, ${ahead} min ahead.` : `You're right on ${tp}%.`}</b>`; }
+  else {
+    let sug = recentTypes(3).filter(t => t.minutes > 0); if (!sug.length) sug = TYPES.slice(0, 3);
+    body = `<div>${Math.ceil(rem)} min of pole work to go to reach ${tp}%.</div>` + sug.map(t => {
+      const n = Math.max(1, Math.ceil(rem / t.minutes - 0.000001));
+      return `<div class="row" style="margin-top:8px"><b>${n} more ${esc(t.name)}</b><span class="small sub">(${t.minutes} min each)</span><button class="btn grow" style="flex:none;margin-left:auto" data-act="add" data-name="${esc(t.name)}" data-n="${n}">Add</button></div>`;
+    }).join('');
+  }
+  return `<div class="row between" style="margin-bottom:8px"><h3 style="margin:0">🎯 What do I need?</h3>${p != null ? `<b style="color:${perfVar(p)}">Now ${pct(p)}</b>` : ''}</div>${body}`;
+}
+function previewCard(e) {
+  const p = edPerf(e);
+  return `<div class="row between"><div><div class="small sub">Budget</div><b class="mono">${hrs(edDraftBudget(e), 2)} hrs</b></div><div style="text-align:right"><div class="small sub">Performance</div><b class="mono" style="color:${perfVar(p)}">${pct(p)}</b></div></div>`;
+}
+function tHours(e) {
+  let d = S.settings.calcEnd - S.settings.calcStart; if (d < 0) d += 1440;
+  if (S.settings.calcLunch) d -= S.settings.lunch;
+  return Math.max(0, d);
+}
+function editorView() {
+  const e = V.editor, date = parseKey(e.key), prev = previousWork(date);
+  const used = TYPES.some(t => e.qty[t.name] > 0);
+  const tm = tHours(e);
+  return `<div class="sheet" id="edSheet"><div class="sheet-in">
+    <div class="sheet-head"><button data-act="ed-cancel">Cancel</button><b>Daily Work</b><button data-act="ed-save"><b>Save</b></button></div>
+    <div class="sheet-body stack">
+      <div class="card row between"><b>📅 ${fmt(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</b><label class="row" style="gap:8px"><span>Day Off</span>${sw('edOff', e.dayOff)}</label></div>
+      ${e.dayOff ? '' : `
+      <div class="stack" style="gap:12px"><h2 style="margin:0">Hours</h2>
+        <div class="grid2"><label class="field"><span>Working</span><input type="text" inputmode="decimal" id="edWorking" placeholder="e.g. 9.5" value="${esc(e.working)}"></label>
+        <label class="field"><span>Downtime</span><input type="text" inputmode="decimal" id="edDown" placeholder="e.g. 0.5" value="${esc(e.down)}"></label></div>
+        <details class="card"><summary><b>🕒 Work out hours from start &amp; finish</b></summary>
+          <div class="stack" style="gap:10px;margin-top:10px">
+            <label class="row between">Start <input type="time" id="tStart" value="${hhmm(S.settings.calcStart)}" style="width:auto"></label>
+            <label class="row between">Finish <input type="time" id="tEnd" value="${hhmm(S.settings.calcEnd)}" style="width:auto"></label>
+            <label class="row between"><span>🍴 Lunch (−${S.settings.lunch} min)</span>${sw('tLunch', S.settings.calcLunch)}</label>
+            <b id="tOut" class="mono">${Math.floor(tm / 60)}h ${tm % 60}m · ${hrs(tm / 60, 2)} hrs</b>
+            <button class="btn primary block" data-act="use-times" ${tm === 0 ? 'disabled' : ''}>${e.tUsed ? '✔ Hours filled in' : 'Use as working hours'}</button>
+          </div></details>
+      </div>
+      <div class="stack" style="gap:12px">
+        <div class="row between"><h2 style="margin:0">Pole Work</h2><b style="color:var(--brand)">${edPoles(e) > 0 ? `${edPoles(e)} pole${edPoles(e) === 1 ? '' : 's'}` : ''}</b></div>
+        <div class="small sub">Tap a type to add one. Once added, use the large − and + buttons to change the number. Touch and hold for more options.</div>
+        ${!used && prev ? `<button class="btn block" data-act="copy-prev" data-key="${prev.key}">⧉ Copy from ${fmt(recDate(prev), { weekday: 'short', day: 'numeric', month: 'short' })}</button>` : ''}
+        <div class="card" id="needCard">${needCard(e)}</div>
+        <div class="grid2">${TYPES.map(t => tile(e, t)).join('')}</div>
+        ${used ? `<div class="card" id="previewCard">${previewCard(e)}</div>` : ''}
+      </div>`}
+      <div><h2>Comments</h2><textarea id="edComments">${esc(e.comments)}</textarea></div>
+      ${e.dayOff ? '' : `<div class="card row between"><b>⏰ Overtime day</b><span class="switch ot"><input type="checkbox" id="edOT" ${e.overtime ? 'checked' : ''}></span></div>`}
+      <div class="stack" style="gap:10px"><button class="btn primary block" data-act="ed-save">${e.dayOff ? 'Save Day Off' : 'Save Work'}</button>
+      ${S.days[e.key] ? `<button class="btn danger block" data-act="ed-delete">Delete Entry</button>` : ''}</div>
+    </div></div></div>`;
+}
+function tile(e, t) {
+  const n = e.qty[t.name] || 0, sel = n > 0;
+  return `<div class="tile ${sel ? 'sel' : ''}"><button class="name" data-act="tile" data-name="${esc(t.name)}">${esc(t.name)}</button><div class="min">${t.minutes} min</div>
+    ${sel ? `<div class="step"><button data-act="add" data-name="${esc(t.name)}" data-n="-1" aria-label="Remove one">−</button><b class="mono">${n}</b><button data-act="add" data-name="${esc(t.name)}" data-n="1" aria-label="Add one">+</button></div>` : ''}</div>`;
+}
+function edAdjust(name, d) {
+  const e = V.editor; const v = Math.max(0, (e.qty[name] || 0) + d);
+  if (v === 0) delete e.qty[name]; else e.qty[name] = v;
+  if (d > 0 && navigator.vibrate) navigator.vibrate(8);
+  render();
+}
+function edCancel() {
+  const e = V.editor;
+  if (edSig(e) !== e.initial && !confirm('Discard your changes?')) return;
+  V.editor = null; render();
+}
+function edSave() {
+  const e = V.editor; let w = 0, dn = 0;
+  if (!e.dayOff) {
+    w = parseNum(e.working); dn = parseNum(e.down);
+    if (w == null) return alert("Working hours isn't a valid number.");
+    if (dn == null) return alert("Downtime hours isn't a valid number.");
+    if (w === 0 && !TYPES.some(t => e.qty[t.name] > 0)) return alert('Add some hours or pole work, or turn on Day Off.');
+    if (w > 24) return alert("Working hours can't be more than 24.");
+    if (dn > w) return alert("Downtime can't be more than working hours.");
+  }
+  const acts = e.dayOff ? [] : TYPES.filter(t => e.qty[t.name] > 0).map(t => ({ typeName: t.name, quantity: e.qty[t.name], minutesEach: t.minutes, countsAsPole: t.countsAsPole }));
+  saveDay(e.key, { actualHours: e.dayOff ? 0 : Math.max(0, w), downtimeHours: e.dayOff ? 0 : Math.max(0, dn), activities: acts, isDayOff: e.dayOff, isOvertime: e.overtime && !e.dayOff, comments: e.comments.trim() || null });
+  V.editor = null; render();
+}
+
+/* -------- reports */
+function pageDetails() {
+  const n = S.settings.reportName.trim(), r = S.settings.reportRoute.trim(), p = [];
+  if (n) p.push('Name: ' + esc(n)); if (r) p.push('Route / ID: ' + esc(r));
+  return p.join('   ·   ');
+}
+const generated = () => new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+function tile2(label, val, color) { return `<div class="tile2"><small>${label}</small><b style="color:${color || '#111'}">${val}</b></div>`; }
+
+function weekReportHTML(date, withComments) {
+  const dates = weekDates(date), s = weeklySummary(date);
+  const ot = dates.filter(d => { const r = rec(d); return r && r.isOvertime && !r.isDayOff; }).length;
+  const pts = dates.map(d => ({ label: weekdayShort(d), value: rec(d) ? perfOf(rec(d)) : null }));
+  let h = `<div class="rp"><h1>Pole Performance Weekly Report</h1>`;
+  const det = pageDetails(); if (det) h += `<div class="gr">${det}</div>`;
+  h += `<div style="font-weight:700;margin-top:4px">Week: ${fmt(dates[0], { day: 'numeric', month: 'short', year: 'numeric' })} – ${fmt(dates[6], { day: 'numeric', month: 'short', year: 'numeric' })}</div>`;
+  h += `<div class="tiles">${tile2('Total poles', s.poles)}${tile2('Net hours', hrs(s.net, 2))}${tile2('Budget hours', hrs(s.budget, 2))}${tile2('Performance', pct(s.perf), perfHex(s.perf))}${tile2('Overtime days', ot, '#8a2be2')}</div>`;
+  if (pts.some(p => p.value != null)) h += `<div class="sec"><b>Daily performance</b>${barChart(pts, 130)}</div>`;
+  let any = false;
+  dates.forEach(d => {
+    const r = rec(d); if (!hasData(r)) return; any = true;
+    const name = fmt(d, { weekday: 'long', day: 'numeric', month: 'short' });
+    h += `<div class="sec">`;
+    if (r.isDayOff) h += `<div class="dayh"><span>${name} — Day Off</span></div>`;
+    else {
+      h += `<div class="dayh"><span>${name} — ${polesOf(r)} poles${r.isOvertime ? '  ·  Overtime' : ''}</span><span class="pill" style="color:${perfHex(perfOf(r))}!important">${pct(perfOf(r))}</span></div>`;
+      h += `<div class="gr" style="margin:5px">Net ${hrs(netH(r), 2)} hrs (working ${hrs(r.actualHours, 2)}, downtime ${hrs(r.downtimeHours, 2)})  ·  Budget ${hrs(budgetH(r), 2)} hrs</div>`;
+    }
+    if (withComments && r.comments) h += `<div class="note">Notes: ${esc(r.comments)}</div>`;
+    if (r.activities.length) {
+      const agg = {}; r.activities.forEach(a => { const g = agg[a.typeName] ||= { q: 0, b: 0, m: 0 }; g.q += a.quantity; g.b += actBudget(a); g.m = actMin(a); });
+      h += `<table><tr><th>Activity</th><th>Qty</th><th>Min each</th><th>Budget hrs</th></tr>${Object.keys(agg).sort().map(n => `<tr><td>${esc(n)}</td><td>${agg[n].q}</td><td>${agg[n].m}</td><td>${hrs(agg[n].b, 2)}</td></tr>`).join('')}</table>`;
+    }
+    h += `</div>`;
+  });
+  if (!any) h += `<div class="gr">No entries recorded for this week.</div>`;
+  return h + `<div class="foot">Generated ${generated()}</div></div>`;
+}
+
+function monthData(first) {
+  const y = first.getFullYear(), m = first.getMonth();
+  const recs = Object.values(S.days).filter(r => { const d = recDate(r); return d.getFullYear() === y && d.getMonth() === m && hasData(r); }).sort((a, b) => a.key < b.key ? -1 : 1);
+  const worked = recs.filter(r => !r.isDayOff && (r.actualHours > 0 || r.activities.length));
+  const g = {};
+  worked.forEach(r => { const k = dayKey(weekStart(recDate(r))); (g[k] ||= []).push(r); });
+  const weeks = Object.keys(g).sort().map(k => ({ start: parseKey(k), days: g[k].length, poles: g[k].reduce((s, r) => s + polesOf(r), 0), net: g[k].reduce((s, r) => s + netH(r), 0), budget: g[k].reduce((s, r) => s + budgetH(r), 0) }))
+    .map(w => ({ ...w, perf: w.net > 0 ? w.budget / w.net : null }));
+  const q = {}, b = {};
+  worked.forEach(r => r.activities.forEach(a => { q[a.typeName] = (q[a.typeName] || 0) + a.quantity; b[a.typeName] = (b[a.typeName] || 0) + actBudget(a); }));
+  const acts = Object.keys(q).map(n => ({ name: n, qty: q[n], budget: b[n] })).sort((a, b2) => b2.budget - a.budget);
+  const net = worked.reduce((s, r) => s + netH(r), 0), budget = worked.reduce((s, r) => s + budgetH(r), 0);
+  const withPerf = weeks.filter(w => w.perf != null), dayPerf = worked.filter(r => perfOf(r) != null);
+  return {
+    month: first, title: fmt(first, { month: 'long', year: 'numeric' }), recs, worked, daysOff: recs.filter(r => r.isDayOff).length, weeks, acts,
+    ot: recs.filter(r => r.isOvertime && !r.isDayOff), notes: recs.filter(r => r.comments),
+    poles: worked.reduce((s, r) => s + polesOf(r), 0), hours: worked.reduce((s, r) => s + r.actualHours, 0), net, budget, perf: net > 0 ? budget / net : null,
+    bestWeek: withPerf.slice().sort((a, c) => c.perf - a.perf)[0], worstWeek: withPerf.slice().sort((a, c) => a.perf - c.perf)[0],
+    bestDay: dayPerf.slice().sort((a, c) => perfOf(c) - perfOf(a))[0], worstDay: dayPerf.slice().sort((a, c) => perfOf(a) - perfOf(c))[0],
+    isEmpty: recs.length === 0
+  };
+}
+function monthReportHTML(md, withComments) {
+  const dmf = d => fmt(d, { weekday: 'short', day: 'numeric', month: 'short' });
+  let h = `<div class="rp"><h1>Pole Performance Monthly Report</h1>`;
+  const det = pageDetails(); if (det) h += `<div class="gr">${det}</div>`;
+  h += `<div style="font-weight:700;margin-top:4px">${md.title}</div>`;
+  h += `<div class="tiles">${tile2('Total poles', md.poles)}${tile2('Net hours', hrs(md.net, 2))}${tile2('Budget hours', hrs(md.budget, 2))}${tile2('Performance', pct(md.perf), perfHex(md.perf))}${tile2('Overtime days', md.ot.length, '#8a2be2')}</div>`;
+  h += `<div class="tiles">${tile2('Days worked', md.worked.length)}${tile2('Days off', md.daysOff)}${tile2('Working hours', hrs(md.hours, 2))}${tile2('Best week', pct(md.bestWeek?.perf), perfHex(md.bestWeek?.perf))}${tile2('Worst week', pct(md.worstWeek?.perf), perfHex(md.worstWeek?.perf))}</div>`;
+  const cw = md.weeks.filter(w => w.perf != null);
+  if (cw.length) h += `<div class="sec"><b>Weekly performance</b>${barChart(cw.map(w => ({ label: dm(w.start), value: w.perf })), 130)}</div>`;
+  if (md.weeks.length) {
+    h += `<div class="sec"><b>Weeks (Thursday – Wednesday, only days in this month)</b><table><tr><th>Week starting</th><th>Days</th><th>Poles</th><th>Net hrs</th><th>Budget hrs</th><th>Performance</th></tr>${md.weeks.map(w => `<tr><td>${dmf(w.start)}</td><td>${w.days}</td><td>${w.poles}</td><td>${hrs(w.net, 2)}</td><td>${hrs(w.budget, 2)}</td><td style="font-weight:700;color:${perfHex(w.perf)}!important">${pct(w.perf)}</td></tr>`).join('')}</table>`;
+    if (md.weeks.length > 1 && md.bestWeek) h += `<div class="gr">Best week: starting ${dmf(md.bestWeek.start)} (${pct(md.bestWeek.perf)})   ·   Worst week: starting ${dmf(md.worstWeek.start)} (${pct(md.worstWeek.perf)})</div>`;
+    if (md.bestDay) h += `<div class="gr">Best day: ${dmf(recDate(md.bestDay))} (${pct(perfOf(md.bestDay))})   ·   Worst day: ${dmf(recDate(md.worstDay))} (${pct(perfOf(md.worstDay))})</div>`;
+    h += `</div>`;
+  }
+  if (md.acts.length) h += `<div class="sec"><b>Activities</b><table><tr><th>Activity</th><th>Qty</th><th>Budget hrs</th></tr>${md.acts.map(a => `<tr><td>${esc(a.name)}</td><td>${a.qty}</td><td>${hrs(a.budget, 2)}</td></tr>`).join('')}</table></div>`;
+  if (md.ot.length) h += `<div class="sec"><b style="color:#8a2be2">Overtime days (${md.ot.length})</b>${md.ot.map(r => `<div style="margin:3px 5px">${dmf(recDate(r))} — ${hrs(r.actualHours, 2)} hrs worked · ${polesOf(r)} poles · ${pct(perfOf(r))}</div>`).join('')}</div>`;
+  if (withComments && md.notes.length) h += `<div class="sec"><b>Notes</b>${md.notes.map(r => `<div class="note">${dmf(recDate(r))}: ${esc(r.comments)}</div>`).join('')}</div>`;
+  return h + `<div class="foot">Generated ${generated()}</div></div>`;
+}
+
+/* -------- export views */
+function weekIssues(date) {
+  const t = today(), out = [];
+  weekDates(date).forEach(d => {
+    if (d > t) return;
+    const r = rec(d);
+    if (!hasData(r)) { out.push({ d, m: 'Nothing entered' }); return; }
+    if (r.isDayOff) return;
+    if (r.actualHours > 0 && !r.activities.length) out.push({ d, m: 'Hours entered but no pole work' });
+    else if (r.actualHours === 0 && r.activities.length) out.push({ d, m: 'Pole work entered but no working hours' });
+    else if (r.actualHours > 0 && netH(r) <= 0) out.push({ d, m: 'Downtime equals all working hours' });
+  });
+  return out;
+}
+function exportView() {
+  if (V.sub === 'monthly') return monthlyView();
+  const d = V.exportDate, s = weeklySummary(d), dates = weekDates(d), issues = weekIssues(d);
+  const any = dates.some(x => hasData(rec(x)));
+  return `<h1>Export</h1>
+  <div class="weeknav"><button class="iconbtn" data-act="xweek" data-n="-1">‹</button><div class="c"><b>${weekTitle(d)}</b><span class="sub small">Thursday – Wednesday</span></div><button class="iconbtn" data-act="xweek" data-n="1">›</button></div>
+  <div class="stack">
+    ${weekMetrics(s)}
+    <div><div class="sect-h" style="margin-top:0">Check before sending</div><div class="sect" style="padding:12px 14px">
+      ${!any && !issues.length ? '<span class="sub">No entries for this week yet</span>' : !issues.length ? '<b style="color:var(--green)">✔ All days look complete</b>' :
+        issues.map(i => `<div class="list-row" data-act="edit" data-key="${dayKey(i.d)}" role="button"><div>⚠️ <b>${fmt(i.d, { weekday: 'long', day: 'numeric', month: 'short' })}</b><div class="small sub">${i.m}</div></div><span class="sub">›</span></div>`).join('')}
+    </div>${issues.length ? '<div class="sect-f">Tap a day to fix it. Days still to come aren\'t flagged.</div>' : ''}</div>
+    <div class="card row between"><div><b>Include comments</b><div class="small sub">Applies to the PDF and the CSV.</div></div>${sw('xComments', S.settings.includeComments)}</div>
+    <div><div class="sect-h" style="margin-top:0">Preview</div><div class="paper-wrap"><div class="paper">${weekReportHTML(d, S.settings.includeComments)}</div></div></div>
+    <div class="stack" style="gap:10px">
+      <button class="btn primary block" data-act="print-week">🖨 Print / Save as PDF</button>
+      <button class="btn block" data-act="csv-week">⬇︎ Download CSV</button>
+      <button class="btn block" data-act="share-csv">⬆︎ Share CSV…</button>
+      <button class="btn block" data-act="monthly">📅 Monthly report</button>
+    </div>
+    <div class="sect-f">“Print / Save as PDF” opens your device's print sheet. Choose <i>Save as PDF</i> (on iPhone: pinch out on the preview, then Share → Save to Files).</div>
+  </div>`;
+}
+function monthlyView() {
+  const md = monthData(V.month);
+  const row = (a, b, c) => `<div class="list-row"><span>${a}</span><b${c ? ` style="color:${c}"` : ''}>${b}</b></div>`;
+  return `<div class="row"><button class="btn" data-act="back-export">‹ Export</button></div><h1 style="margin-top:12px">Monthly report</h1>
+  <div class="row between" style="margin-bottom:12px"><button class="iconbtn" data-act="month" data-n="-1">‹</button><h2 style="margin:0">${md.title}</h2><button class="iconbtn" data-act="month" data-n="1">›</button></div>
+  ${md.isEmpty ? '<div class="card sub">No entries this month</div>' : `<div class="stack">
+    <div class="sect">${row('Poles', md.poles)}${row('Net hours', hrs(md.net, 2))}${row('Performance', pct(md.perf), perfVar(md.perf))}${row('Days worked', md.worked.length)}${row('Days off', md.daysOff)}${row('Overtime days', md.ot.length, 'var(--purple)')}
+      ${md.bestWeek ? row('Best week', `${dm(md.bestWeek.start)} · ${pct(md.bestWeek.perf)}`) : ''}${md.worstWeek && md.weeks.length > 1 ? row('Worst week', `${dm(md.worstWeek.start)} · ${pct(md.worstWeek.perf)}`) : ''}</div>
+    <div class="card row between"><b>Include notes</b>${sw('xComments', S.settings.includeComments)}</div>
+    <div class="paper-wrap"><div class="paper">${monthReportHTML(md, S.settings.includeComments)}</div></div>
+    <button class="btn primary block" data-act="print-month">🖨 Print / Save as PDF</button></div>`}`;
+}
+
+/* -------- settings */
+function settingsView() {
+  const s = S.settings, tm = tHours(), nm = Object.keys(S.days).length;
+  const lastB = s.lastBackup ? new Date(s.lastBackup).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never';
+  return `<h1>Settings</h1>
+  <div class="sect-h" style="margin-top:0">Work hours calculator</div>
+  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
+    <label class="row between">Start <input type="time" id="cStart" value="${hhmm(s.calcStart)}" style="width:auto"></label>
+    <label class="row between">Finish <input type="time" id="cEnd" value="${hhmm(s.calcEnd)}" style="width:auto"></label>
+    <label class="row between"><span>🍴 Lunch (−${s.lunch} min)</span>${sw('cLunch', s.calcLunch)}</label>
+    <div class="row between"><div><b style="font-size:20px" id="cOut1">${Math.floor(tm / 60)}h ${tm % 60}m</b><div class="sub mono" id="cOut2">${hrs(tm / 60, 2)} hrs</div></div><button class="btn" data-act="calc-copy">${V.calcCopied ? '✔ Copied' : 'Copy'}</button></div>
+    <button class="btn primary block" data-act="calc-today" ${tm === 0 ? 'disabled' : ''}>${V.calcApplied ? '✔ Saved to today' : '＋ Use for today'}</button>
+  </div></div>
+  <div class="sect-f">“Use for today” sets today's working hours. Copy gives you the decimal hours to paste into any other day.</div>
+
+  <div class="sect-h">Performance targets</div>
+  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
+    <label class="row between">Target (green) %<input type="number" id="sTarget" value="${s.target}" min="50" max="150" style="width:90px"></label>
+    <label class="row between">Amber from %<input type="number" id="sAmber" value="${s.amber}" min="0" max="150" style="width:90px"></label>
+    <label class="row between">Lunch (minutes)<input type="number" id="sLunch" value="${s.lunch}" min="0" max="120" style="width:90px"></label>
+    <button class="btn" data-act="reset-targets">Reset to 100% and 85%</button>
+  </div></div>
+  <div class="sect-f">At or above the target is green, at or above the amber level is orange, and below it is red. This applies to the app and the reports.</div>
+
+  <div class="sect-h">Reminder</div>
+  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
+    <label class="row between">In-app reminder${sw('rOn', s.reminder)}</label>
+    ${s.reminder ? `<label class="row between">After<input type="time" id="rTime" value="${hhmm(s.reminderMin)}" style="width:auto"></label>` : ''}
+  </div></div>
+  <div class="sect-f">A web app can't send notifications while it's closed, so this shows a banner on the Home screen on weekdays after the chosen time, until today is entered or marked as a day off.</div>
+
+  <div class="sect-h">Report details</div>
+  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
+    <input type="text" id="sName" placeholder="Your name" value="${esc(s.reportName)}" autocomplete="name">
+    <input type="text" id="sRoute" placeholder="Employee number / route" value="${esc(s.reportRoute)}">
+  </div></div>
+  <div class="sect-f">Printed at the top of exported PDFs. Leave blank to hide.</div>
+
+  <div class="sect-h">Appearance</div>
+  <div class="sect" style="padding:12px 14px"><select id="sAppear"><option value="system" ${s.appearance === 'system' ? 'selected' : ''}>Follow device</option><option value="light" ${s.appearance === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${s.appearance === 'dark' ? 'selected' : ''}>Dark</option></select></div>
+
+  <div class="sect-h">Backup</div>
+  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
+    <div class="small sub">${nm} day${nm === 1 ? '' : 's'} stored on this device · Last backup: ${lastB}</div>
+    <button class="btn primary block" data-act="backup">⬇︎ Back up all data (zip)</button>
+    <button class="btn block" data-act="backup-share">⬆︎ Share backup…</button>
+    <button class="btn block" data-act="restore">⤴ Restore from backup</button>
+  </div></div>
+  <div class="sect-f">Backups are a .zip file in the same format as your iPhone app, so a backup from either one can be restored in the other. Restoring merges into your current data; days on the same date are replaced by the backup. Back up regularly: browsers can clear site data.</div>
+
+  <div class="sect-h">Danger zone</div>
+  <div class="sect" style="padding:12px 14px"><button class="btn danger block" data-act="wipe">Delete all data on this device</button></div>`;
+}
+
+/* ------------------------------------------------------------------ render */
+function tabbar() {
+  const t = (id, e, l) => `<button class="tab ${V.tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}"><span class="e">${e}</span>${l}</button>`;
+  return `<nav class="tabbar"><div class="tabbar-in">${t('home', '🏠', 'Home')}${t('week', '📅', 'Week')}${t('diary', '📖', 'Diary')}${t('export', '⬆︎', 'Export')}${t('settings', '⚙︎', 'Settings')}</div></nav>`;
+}
+function render() {
+  document.documentElement.dataset.theme = S.settings.appearance;
+  const sy = window.scrollY, sheet = $('#edSheet'), ss = sheet ? sheet.scrollTop : 0;
+  let body = '';
+  switch (V.tab) {
+    case 'home': body = homeView(); break;
+    case 'week': body = weekView(); break;
+    case 'diary': body = diaryView(); break;
+    case 'export': body = exportView(); break;
+    case 'settings': body = settingsView(); break;
+  }
+  const toast = V.toast ? `<div class="toast"><span>${esc(V.toast.msg)}</span>${V.toast.undo ? '<button data-act="undo">Undo</button>' : ''}</div>` : '';
+  const menu = V.menu ? `<div class="menu-back" data-act="menu-close"><div class="menu"><b>${esc(V.menu.name)}</b>
+    <button class="btn block" data-act="add" data-name="${esc(V.menu.name)}" data-n="5" data-close="1">Add 5</button>
+    <button class="btn block" data-act="add" data-name="${esc(V.menu.name)}" data-n="10" data-close="1">Add 10</button>
+    ${(V.editor.qty[V.menu.name] || 0) > 0 ? `<button class="btn danger block" data-act="add" data-name="${esc(V.menu.name)}" data-n="${-(V.editor.qty[V.menu.name] || 0)}" data-close="1">Remove all</button>` : ''}
+    <button class="btn block" data-act="menu-close">Cancel</button></div></div>` : '';
+  $('#app').innerHTML = `<main>${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${toast}${menu}`;
+  window.scrollTo(0, sy);
+  const ns = $('#edSheet'); if (ns) ns.scrollTop = ss;
+}
+
+/* ------------------------------------------------------------------ file helpers */
+function download(name, blob) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function shareFile(file, fallbackName) {
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: file.name }); return true; }
+  } catch (e) { if (e && e.name === 'AbortError') return true; }
+  download(fallbackName || file.name, file); return false;
+}
+function printHTML(html) {
+  $('#printRoot').innerHTML = html;
+  setTimeout(() => window.print(), 50);
+}
+window.addEventListener('afterprint', () => { $('#printRoot').innerHTML = ''; });
+
+/* crc + zip (stored) */
+const CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function makeZip(name, data) {
+  const nb = new TextEncoder().encode(name), crc = crc32(data), n = new Date();
+  const dt = ((n.getHours() << 11) | (n.getMinutes() << 5) | (n.getSeconds() >> 1)) & 0xFFFF;
+  const dd = ((Math.max(1980, n.getFullYear()) - 1980) << 9 | (n.getMonth() + 1) << 5 | n.getDate()) & 0xFFFF;
+  const out = []; const w16 = v => out.push(v & 255, (v >> 8) & 255); const w32 = v => { w16(v & 0xFFFF); w16((v >>> 16) & 0xFFFF); };
+  w32(0x04034B50); w16(20); w16(0x0800); w16(0); w16(dt); w16(dd); w32(crc); w32(data.length); w32(data.length); w16(nb.length); w16(0);
+  nb.forEach(b => out.push(b)); const head = Uint8Array.from(out);
+  const c = []; const c16 = v => c.push(v & 255, (v >> 8) & 255); const c32 = v => { c16(v & 0xFFFF); c16((v >>> 16) & 0xFFFF); };
+  c32(0x02014B50); c16(20); c16(20); c16(0x0800); c16(0); c16(dt); c16(dd); c32(crc); c32(data.length); c32(data.length); c16(nb.length); c16(0); c16(0); c16(0); c16(0); c32(0); c32(0); nb.forEach(b => c.push(b));
+  const cdStart = head.length + data.length, e = []; const e16 = v => e.push(v & 255, (v >> 8) & 255); const e32 = v => { e16(v & 0xFFFF); e16((v >>> 16) & 0xFFFF); };
+  e32(0x06054B50); e16(0); e16(0); e16(1); e16(1); e32(c.length); e32(cdStart); e16(0);
+  const res = new Uint8Array(head.length + data.length + c.length + e.length);
+  res.set(head, 0); res.set(data, head.length); res.set(Uint8Array.from(c), head.length + data.length); res.set(Uint8Array.from(e), head.length + data.length + c.length);
+  return res;
+}
+async function zipFirstJSON(buf) {
+  const b = new Uint8Array(buf), dv = new DataView(buf);
+  let eocd = -1; for (let i = b.length - 22; i >= Math.max(0, b.length - 22 - 65535); i--) { if (b[i] === 0x50 && b[i + 1] === 0x4B && b[i + 2] === 5 && b[i + 3] === 6) { eocd = i; break; } }
+  if (eocd < 0) throw new Error("This isn't a valid zip file.");
+  const count = dv.getUint16(eocd + 10, true); let off = dv.getUint32(eocd + 16, true);
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(off, true) !== 0x02014B50) throw new Error('The zip file is damaged.');
+    const method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true), nl = dv.getUint16(off + 28, true), xl = dv.getUint16(off + 30, true), cl = dv.getUint16(off + 32, true), lo = dv.getUint32(off + 42, true);
+    const name = new TextDecoder().decode(b.slice(off + 46, off + 46 + nl)); off += 46 + nl + xl + cl;
+    const low = name.toLowerCase(), last = low.split('/').pop();
+    if (!low.endsWith('.json') || low.startsWith('__macosx/') || last.startsWith('._')) continue;
+    const start = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), payload = b.slice(start, start + csize);
+    if (method === 0) return new TextDecoder().decode(payload);
+    if (method === 8) {
+      if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot unzip compressed backups. Try a newer browser.');
+      const ds = new DecompressionStream('deflate-raw'), wr = ds.writable.getWriter(); wr.write(payload); wr.close();
+      return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+    }
+    throw new Error('Unsupported zip compression method.');
+  }
+  throw new Error('No backup (.json) file was found inside the zip.');
+}
+
+/* ---- backup format (compatible with the iPhone app: Swift JSONEncoder, dates = seconds since 2001-01-01) */
+const REF = 978307200;
+function exportJSON() {
+  const arr = Object.values(S.days).sort((a, b) => a.key < b.key ? 1 : -1).map(r => {
+    const o = {
+      id: r.id, date: recDate(r).getTime() / 1000 - REF, actualHours: r.actualHours, downtimeHours: r.downtimeHours,
+      activities: r.activities.map(a => ({ id: a.id || uuid(), typeName: a.typeName, quantity: a.quantity, minutesEach: a.minutesEach, countsAsPole: a.countsAsPole })),
+      isDayOff: r.isDayOff, isOvertime: r.isOvertime
+    };
+    if (r.comments) o.comments = r.comments; return o;
+  });
+  return JSON.stringify(arr);
+}
+function importJSON(text) {
+  const arr = JSON.parse(text); if (!Array.isArray(arr)) throw new Error("That file isn't a Pole Tracker backup.");
+  let n = 0;
+  arr.forEach(o => {
+    let d = typeof o.date === 'number' ? new Date((o.date + REF) * 1000) : new Date(o.date);
+    if (isNaN(d)) return;
+    const key = dayKey(d);
+    S.days[key] = mkDay(key, {
+      id: o.id || uuid(), actualHours: Number(o.actualHours) || 0, downtimeHours: Number(o.downtimeHours) || 0,
+      activities: (o.activities || []).map(a => ({ id: a.id, typeName: a.typeName, quantity: Number(a.quantity) || 0, minutesEach: a.minutesEach ?? undefined, countsAsPole: a.countsAsPole ?? undefined })),
+      isDayOff: !!o.isDayOff, isOvertime: !!o.isOvertime, comments: o.comments || null
+    }); n++;
+  });
+  save(); return n;
+}
+function backupFile() {
+  const name = `pole-tracker-backup-${dayKey(new Date())}.zip`;
+  return new File([makeZip('pole-tracker-backup.json', new TextEncoder().encode(exportJSON()))], name, { type: 'application/zip' });
+}
+
+/* ------------------------------------------------------------------ events */
+let lastLong = 0;
+function openEditor(key) { V.editor = newEditor(key); V.menu = null; render(); }
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-act]'); if (!el) return;
+  if (el.dataset.act === 'clear') ev.stopPropagation();
+  if (Date.now() - lastLong < 350) return;
+  const d = el.dataset, a = d.act;
+  switch (a) {
+    case 'tab': V.tab = d.tab; V.sub = null; window.scrollTo(0, 0); render(); break;
+    case 'enter-today': openEditor(dayKey(today())); break;
+    case 'edit': openEditor(d.key); break;
+    case 'week': V.weekDate = addDays(weekStart(V.weekDate), 7 * Number(d.n)); render(); break;
+    case 'week-today': V.weekDate = new Date(); render(); break;
+    case 'xweek': V.exportDate = addDays(weekStart(V.exportDate), 7 * Number(d.n)); render(); break;
+    case 'month': V.month = new Date(V.month.getFullYear(), V.month.getMonth() + Number(d.n), 1); render(); break;
+    case 'month-today': V.month = new Date(today().getFullYear(), today().getMonth(), 1); render(); break;
+    case 'clear': {
+      const r = S.days[d.key]; if (!r) break;
+      if (confirm(`Clear ${fmt(parseKey(d.key), { weekday: 'long', day: 'numeric', month: 'long' })}?\n\nThis removes the hours, pole work and comments for this day. You can undo it for a few seconds afterwards.`)) { deleteDay(d.key); render(); }
+      break; }
+    case 'undo': undoDelete(); break;
+    case 'diary-day': { const r = S.days[d.key]; V.diaryDay = { key: d.key, overtime: r?.isOvertime || false, notes: r?.comments || '' }; render(); break; }
+    case 'diary-cancel': V.diaryDay = null; render(); break;
+    case 'diary-save': { const dd = V.diaryDay; setDiary(dd.key, dd.overtime, dd.notes.trim() || null); V.diaryDay = null; render(); break; }
+    case 'diary-edit': { const dd = V.diaryDay; setDiary(dd.key, dd.overtime, dd.notes.trim() || null); V.diaryDay = null; openEditor(dd.key); break; }
+    case 'tile': edAdjust(d.name, 1); break;
+    case 'add': edAdjust(d.name, Number(d.n)); if (d.close) { V.menu = null; render(); } break;
+    case 'menu-close': if (el.classList.contains('menu-back') && ev.target !== el) break; V.menu = null; render(); break;
+    case 'copy-prev': { const p = S.days[d.key]; V.editor.qty = {}; p.activities.forEach(x => { if (typeNamed(x.typeName)) V.editor.qty[x.typeName] = (V.editor.qty[x.typeName] || 0) + x.quantity; }); render(); break; }
+    case 'use-times': { const h = tHours() / 60; V.editor.working = String(Math.round(h * 100) / 100); V.editor.tUsed = true; render(); break; }
+    case 'ed-cancel': edCancel(); break;
+    case 'ed-save': edSave(); break;
+    case 'ed-delete': if (confirm("Delete this day's entry?")) { deleteDay(V.editor.key); V.editor = null; render(); } break;
+    case 'print-week': printHTML(weekReportHTML(V.exportDate, S.settings.includeComments)); break;
+    case 'print-month': printHTML(monthReportHTML(monthData(V.month), S.settings.includeComments)); break;
+    case 'csv-week': download(`PolePerformance-${dayKey(weekStart(V.exportDate))}.csv`, new Blob([csvFor(weekDates(V.exportDate), S.settings.includeComments)], { type: 'text/csv' })); break;
+    case 'share-csv': shareFile(new File([csvFor(weekDates(V.exportDate), S.settings.includeComments)], `PolePerformance-${dayKey(weekStart(V.exportDate))}.csv`, { type: 'text/csv' })); break;
+    case 'monthly': V.sub = 'monthly'; window.scrollTo(0, 0); render(); break;
+    case 'back-export': V.sub = null; render(); break;
+    case 'calc-copy': { const t = hrs(tHours() / 60, 2); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(() => {}); V.calcCopied = true; render(); break; }
+    case 'calc-today': {
+      const k = dayKey(today()), r = S.days[k], h = tHours() / 60;
+      if (r && (r.isDayOff || r.actualHours > 0)) {
+        const msg = r.isDayOff ? `Today is marked as a day off. Replace it with ${hrs(h, 2)} hrs of work?` : `Today currently has ${hrs(r.actualHours, 2)} hrs. Replace with ${hrs(h, 2)} hrs? Pole work, downtime and comments are kept.`;
+        if (!confirm(msg)) break;
+      }
+      setWorkingHours(k, h); V.calcApplied = true; render(); break; }
+    case 'reset-targets': S.settings.target = 100; S.settings.amber = 85; save(); render(); break;
+    case 'backup': { const f = backupFile(); download(f.name, f); S.settings.lastBackup = Date.now(); save(); render(); break; }
+    case 'backup-share': { const f = backupFile(); shareFile(f).then(() => { S.settings.lastBackup = Date.now(); save(); render(); }); break; }
+    case 'restore': $('#fileIn').click(); break;
+    case 'wipe': if (confirm('Delete ALL data on this device? This cannot be undone.\n\nMake a backup first if you are unsure.') && confirm('Really delete everything?')) { S.days = {}; save(); render(); } break;
+  }
+});
+
+/* long-press on pole tiles opens "Add 5 / Add 10 / Remove all" */
+let lpTimer = null;
+document.addEventListener('pointerdown', ev => {
+  const el = ev.target.closest('[data-act="tile"]'); if (!el) return;
+  lpTimer = setTimeout(() => { lastLong = Date.now(); V.menu = { name: el.dataset.name }; render(); }, 500);
+});
+['pointerup', 'pointercancel', 'pointermove', 'scroll'].forEach(t => document.addEventListener(t, () => { clearTimeout(lpTimer); }, { passive: true }));
+document.addEventListener('contextmenu', ev => { if (ev.target.closest('.tile')) ev.preventDefault(); });
+
+function updateDerived() {
+  const e = V.editor; if (!e) return;
+  const n = $('#needCard'); if (n) n.innerHTML = needCard(e);
+  const p = $('#previewCard'); if (p) p.innerHTML = previewCard(e);
+}
+document.addEventListener('input', ev => {
+  const t = ev.target, id = t.id, e = V.editor;
+  if (id === 'edWorking') { e.working = t.value; e.tUsed = false; updateDerived(); }
+  else if (id === 'edDown') { e.down = t.value; updateDerived(); }
+  else if (id === 'edComments') e.comments = t.value;
+  else if (id === 'ddNotes') V.diaryDay.notes = t.value;
+  else if (id === 'sName') { S.settings.reportName = t.value; save(); }
+  else if (id === 'sRoute') { S.settings.reportRoute = t.value; save(); }
+});
+document.addEventListener('change', ev => {
+  const t = ev.target, id = t.id, s = S.settings;
+  switch (id) {
+    case 'edOff': V.editor.dayOff = t.checked; render(); break;
+    case 'edOT': V.editor.overtime = t.checked; break;
+    case 'ddOT': V.diaryDay.overtime = t.checked; break;
+    case 'tStart': s.calcStart = toMin(t.value); save(); $('#tOut').textContent = outText(); V.editor.tUsed = false; break;
+    case 'tEnd': s.calcEnd = toMin(t.value); save(); $('#tOut').textContent = outText(); V.editor.tUsed = false; break;
+    case 'tLunch': s.calcLunch = t.checked; save(); $('#tOut').textContent = outText(); V.editor.tUsed = false; break;
+    case 'cStart': s.calcStart = toMin(t.value); save(); V.calcCopied = V.calcApplied = false; render(); break;
+    case 'cEnd': s.calcEnd = toMin(t.value); save(); V.calcCopied = V.calcApplied = false; render(); break;
+    case 'cLunch': s.calcLunch = t.checked; save(); V.calcCopied = V.calcApplied = false; render(); break;
+    case 'xComments': s.includeComments = t.checked; save(); render(); break;
+    case 'sTarget': s.target = Math.min(150, Math.max(50, Number(t.value) || 100)); if (s.amber > s.target) s.amber = s.target; save(); render(); break;
+    case 'sAmber': s.amber = Math.min(s.target, Math.max(0, Number(t.value) || 0)); save(); render(); break;
+    case 'sLunch': s.lunch = Math.min(120, Math.max(0, Number(t.value) || 0)); save(); render(); break;
+    case 'rOn': s.reminder = t.checked; save(); render(); break;
+    case 'rTime': s.reminderMin = toMin(t.value); save(); break;
+    case 'sAppear': s.appearance = t.value; save(); render(); break;
+    case 'fileIn': {
+      const f = t.files && t.files[0]; if (!f) break;
+      f.arrayBuffer().then(async buf => {
+        const u = new Uint8Array(buf);
+        const text = (u[0] === 0x50 && u[1] === 0x4B) ? await zipFirstJSON(buf) : new TextDecoder().decode(buf);
+        const n = importJSON(text); t.value = ''; flash(`Restored ${n} day${n === 1 ? '' : 's'} from the backup.`);
+      }).catch(err => { t.value = ''; alert("That file couldn't be restored: " + (err && err.message || err)); });
+      break; }
+  }
+});
+function outText() { const tm = tHours(); return `${Math.floor(tm / 60)}h ${tm % 60}m · ${hrs(tm / 60, 2)} hrs`; }
+
+/* ------------------------------------------------------------------ boot: icon, manifest, service worker */
+(function boot() {
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 180; const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 180, 180); g.addColorStop(0, '#1a59ad'); g.addColorStop(1, '#2e8cd1'); x.fillStyle = g; x.fillRect(0, 0, 180, 180);
+    x.fillStyle = '#fff'; x.fillRect(80, 28, 20, 124); x.fillRect(46, 52, 88, 12); x.fillRect(58, 82, 64, 10);
+    const l = document.createElement('link'); l.rel = 'apple-touch-icon'; l.href = c.toDataURL('image/png'); document.head.appendChild(l);
+    const m = { name: 'Pole Test Tracker', short_name: 'Pole Tracker', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#ffffff', theme_color: '#1a59ad', icons: [{ src: c.toDataURL('image/png'), sizes: '180x180', type: 'image/png' }] };
+    const ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' })); document.head.appendChild(ml);
+  } catch (e) {}
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !V.editor && !V.diaryDay) render(); });
+  render();
+})();
+})();
+</script>
+</body>
+</html>
