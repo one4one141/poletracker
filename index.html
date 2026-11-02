@@ -122,6 +122,17 @@ svg text{fill:var(--sub);font-size:10px}
 .paper svg text{fill:#555}
 .hide{display:none!important}
 .err{color:var(--red)}
+.gate{position:fixed;inset:0;z-index:100;background:rgba(18,20,26,.6);-webkit-backdrop-filter:grayscale(1) blur(7px);backdrop-filter:grayscale(1) blur(7px);display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom));overflow:auto}
+.gate-card{background:var(--bg);color:var(--text);border-radius:24px;padding:26px 20px 16px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.gate-ic{width:76px;height:76px;border-radius:19px;margin:0 auto 16px;background:linear-gradient(135deg,#1a59ad,#2e8cd1);display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(26,89,173,.4)}
+.gate-card h2{font-size:22px;margin:0 0 8px;letter-spacing:-.3px}
+.gate-card p{margin:0 0 10px;color:var(--sub);font-size:15px}
+.gate-warn{background:color-mix(in srgb,var(--orange) 15%,var(--card));border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:14px 0 16px;color:var(--text)}
+.gate-card .btn.primary{padding:15px;font-size:17px;border-radius:14px}
+.gate-skip{display:block;margin:12px auto 0;border:0;background:none;color:var(--sub);font-size:13.5px;text-decoration:underline;padding:8px}
+.updbar{position:sticky;top:calc(6px + env(safe-area-inset-top));z-index:15;background:var(--brand);color:#fff;border-radius:14px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.updbar span{flex:1;font-weight:600;font-size:15px;line-height:1.25} .updbar small{display:block;font-weight:400;opacity:.85;font-size:12px}
+.updbar .btn{background:#fff;color:var(--brand);padding:8px 14px} .updbar .x{background:none;border:0;color:#fff;opacity:.8;font-size:20px;padding:4px 6px}
 .install{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 16%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--brand) 30%,transparent);border-radius:16px;padding:14px}
 .install .t{display:flex;gap:12px;align-items:flex-start}.install .ic{font-size:28px;line-height:1}
 .install .b{display:flex;gap:8px;margin-top:12px}.install .b .btn{flex:1}
@@ -139,6 +150,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
+const APP_VERSION = '2026-11-02.2';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 const TYPES = [
@@ -308,12 +320,34 @@ function lineChart(points, h = 150) {
   return s + '</svg>';
 }
 
+/* ------------------------------------------------------------------ update notice */
+let lastUpdCheck = 0;
+async function checkUpdate(force) {
+  if (!/^https?:$/.test(location.protocol) || navigator.onLine === false) return;
+  if (!force && Date.now() - lastUpdCheck < 30000) return;
+  lastUpdCheck = Date.now();
+  try {
+    const r = await fetch(location.href.split('#')[0].split('?')[0], { cache: 'no-store' });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/APP_VERSION\s*=\s*'([^']+)'/);
+    if (m && m[1] !== APP_VERSION && !V.update) { V.update = true; render(); }
+  } catch (e) {}
+}
+async function applyUpdate() {
+  try {
+    await fetch(location.href.split('#')[0].split('?')[0], { cache: 'reload' });
+    if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); }
+    if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update().catch(() => {}))); }
+  } catch (e) {}
+  location.reload();
+}
+
 /* ------------------------------------------------------------------ view state */
 const today = () => sod(new Date());
 const V = {
   tab: 'home', sub: null,
   weekDate: new Date(), exportDate: new Date(), month: new Date(today().getFullYear(), today().getMonth(), 1),
-  editor: null, diaryDay: null, menu: null, installHelp: false, toast: null, calcCopied: false, calcApplied: false
+  editor: null, diaryDay: null, menu: null, installHelp: false, update: false, updDismissed: false, gateSkipped: false, toast: null, calcCopied: false, calcApplied: false
 };
 
 /* ------------------------------------------------------------------ small components */
@@ -331,13 +365,24 @@ const isStandalone = () => window.navigator.standalone === true || (window.match
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const inAppBrowser = () => /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|Twitter|LinkedInApp|GSA\//i.test(navigator.userAgent) || (isIOS() && !/safari\//i.test(navigator.userAgent));
 const canInstallHere = () => !isStandalone() && /^https?:$/.test(location.protocol);
-const installDue = () => canInstallHere() && Date.now() - (S.settings.installDismissed || 0) > 7 * 864e5;
+const installDue = () => canInstallHere();
 let deferredInstall = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; render(); });
 window.addEventListener('appinstalled', () => { deferredInstall = null; V.installHelp = false; render(); });
 function installBanner() {
   return `<div class="install"><div class="t"><span class="ic">📲</span><div><b>Add this app to your Home Screen</b><div class="sub small" style="margin-top:3px">Opens full screen like a normal app, works offline, and helps keep your data safe on your phone.</div></div></div>
-  <div class="b">${deferredInstall ? '<button class="btn primary" data-act="install-now">Install</button>' : '<button class="btn primary" data-act="install-help">Show me how</button>'}<button class="btn" data-act="install-dismiss">Not now</button></div></div>`;
+  <div class="b">${deferredInstall ? '<button class="btn primary" data-act="install-now">Install</button>' : '<button class="btn primary" data-act="install-help">Show me how</button>'}</div></div>`;
+}
+function installGate() {
+  const big = POLE_ICON.replace('width="22" height="22"', 'width="44" height="44"');
+  return `<div class="gate" role="dialog" aria-modal="true" aria-labelledby="gateT"><div class="gate-card">
+    <div class="gate-ic">${big}</div>
+    <h2 id="gateT">Add this app to your Home Screen</h2>
+    <p>Pole Test Tracker is designed to run as an app on your phone. Install it once and it opens full screen, works without a signal, and keeps your entries safe.</p>
+    <div class="gate-warn">⚠️ <b>Important:</b> your entries are stored on this device. If you use the app in a browser tab instead, your phone can delete them after about a week, and they won't appear in the installed app.</div>
+    ${deferredInstall ? '<button class="btn primary block" data-act="install-now">Install the app</button>' : '<button class="btn primary block" data-act="install-help">Show me how</button>'}
+    <button class="gate-skip" data-act="gate-skip">Continue in the browser for now</button>
+  </div></div>`;
 }
 function installSheet() {
   let steps, note = '';
@@ -776,7 +821,9 @@ function render() {
     <button class="btn block" data-act="add" data-name="${esc(V.menu.name)}" data-n="10" data-close="1">Add 10</button>
     ${(V.editor.qty[V.menu.name] || 0) > 0 ? `<button class="btn danger block" data-act="add" data-name="${esc(V.menu.name)}" data-n="${-(V.editor.qty[V.menu.name] || 0)}" data-close="1">Remove all</button>` : ''}
     <button class="btn block" data-act="menu-close">Cancel</button></div></div>` : '';
-  $('#app').innerHTML = `<main>${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${V.installHelp ? installSheet() : ''}${toast}${menu}`;
+  const upd = V.update && !V.updDismissed ? `<div class="updbar"><span>✨ A new version is available<small>Tap Update to get the latest improvements. Your data is kept.</small></span><button class="btn" data-act="app-update">Update</button><button class="x" data-act="app-update-dismiss" aria-label="Dismiss">✕</button></div>` : '';
+  $('#app').innerHTML = `<main>${upd}${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${V.installHelp ? installSheet() : ''}${canInstallHere() && !V.gateSkipped && !V.installHelp ? installGate() : ''}${toast}${menu}`;
+  document.body.style.overflow = (canInstallHere() && !V.gateSkipped && !V.installHelp) ? 'hidden' : '';
   window.scrollTo(0, sy);
   const ns = $('#edSheet'); if (ns) ns.scrollTop = ss;
 }
@@ -1089,10 +1136,12 @@ document.addEventListener('click', ev => {
   if (Date.now() - lastLong < 350) return;
   const d = el.dataset, a = d.act;
   switch (a) {
+    case 'app-update': { el.disabled = true; el.textContent = 'Updating…'; applyUpdate(); break; }
+    case 'app-update-dismiss': V.updDismissed = true; render(); break;
     case 'install-help': V.installHelp = true; render(); break;
     case 'copy-link': { const u = location.href.split('#')[0]; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => flash('Link copied. Paste it into Safari.')).catch(() => prompt('Copy this link and open it in Safari:', u)); break; }
     case 'install-close': V.installHelp = false; render(); break;
-    case 'install-dismiss': S.settings.installDismissed = Date.now(); save(); render(); break;
+    case 'gate-skip': V.gateSkipped = true; render(); break;
     case 'install-now': if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; render(); }); } else { V.installHelp = true; render(); } break;
     case 'tab': V.tab = d.tab; V.sub = null; window.scrollTo(0, 0); render(); break;
     case 'enter-today': openEditor(dayKey(today())); break;
@@ -1204,7 +1253,9 @@ function outText() { const tm = tHours(); return `${Math.floor(tm / 60)}h ${tm %
     const ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' })); document.head.appendChild(ml);
   } catch (e) {}
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !V.editor && !V.diaryDay) render(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkUpdate(); if (!V.editor && !V.diaryDay) render(); } });
+  window.addEventListener('online', () => checkUpdate(true));
+  setTimeout(() => checkUpdate(true), 1500);
   render();
 })();
 })();
