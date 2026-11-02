@@ -125,6 +125,12 @@ svg text{fill:var(--sub);font-size:10px}
 .paper svg text{fill:#555}
 .hide{display:none!important}
 .err{color:var(--red)}
+.install{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 16%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--brand) 30%,transparent);border-radius:16px;padding:14px}
+.install .t{display:flex;gap:12px;align-items:flex-start}.install .ic{font-size:28px;line-height:1}
+.install .b{display:flex;gap:8px;margin-top:12px}.install .b .btn{flex:1}
+ol.steps{margin:0;padding-left:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:12px}
+ol.steps li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;background:var(--card);border-radius:12px;padding:12px}
+ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
 </style>
 </head>
 <body>
@@ -150,7 +156,7 @@ const typeNamed = n => TYPES.find(t => t.name === n);
 const DEFAULTS = {
   target: 100, amber: 85, lunch: 40, appearance: 'system', reportName: '', reportRoute: '',
   includeComments: true, calcStart: 480, calcEnd: 1020, calcLunch: false,
-  reminder: false, reminderMin: 1020, lastBackup: 0
+  reminder: false, reminderMin: 1020, lastBackup: 0, installDismissed: 0
 };
 
 let S = load();
@@ -327,7 +333,7 @@ const today = () => sod(new Date());
 const V = {
   tab: 'home', sub: null,
   weekDate: new Date(), exportDate: new Date(), month: new Date(today().getFullYear(), today().getMonth(), 1),
-  editor: null, diaryDay: null, menu: null, toast: null, calcCopied: false, calcApplied: false
+  editor: null, diaryDay: null, menu: null, installHelp: false, toast: null, calcCopied: false, calcApplied: false
 };
 
 /* ------------------------------------------------------------------ small components */
@@ -337,6 +343,32 @@ const chartCard = (t, inner) => `<div class="card"><h3>${t}</h3>${inner}</div>`;
 const sw = (id, checked, cls = '') => `<span class="switch ${cls}"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''}></span>`;
 
 /* ------------------------------------------------------------------ views */
+const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isIOSSafari = () => isIOS() && !/crios|fxios|edgios|opios|gsa\//i.test(navigator.userAgent);
+const canInstallHere = () => !isStandalone() && /^https?:$/.test(location.protocol);
+const installDue = () => canInstallHere() && Date.now() - (S.settings.installDismissed || 0) > 7 * 864e5;
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; render(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; V.installHelp = false; render(); });
+function installBanner() {
+  return `<div class="install"><div class="t"><span class="ic">📲</span><div><b>Add this app to your Home Screen</b><div class="sub small" style="margin-top:3px">Opens full screen like a normal app, works offline, and helps keep your data safe on your phone.</div></div></div>
+  <div class="b">${deferredInstall ? '<button class="btn primary" data-act="install-now">Install</button>' : '<button class="btn primary" data-act="install-help">Show me how</button>'}<button class="btn" data-act="install-dismiss">Not now</button></div></div>`;
+}
+function installSheet() {
+  let steps, note = '';
+  if (isIOS()) {
+    if (!isIOSSafari()) note = '<div class="banner" style="margin:0"><span>⚠️ On iPhone and iPad, only <b>Safari</b> can add apps to the Home Screen. Open this page in Safari first.</span></div>';
+    steps = ['Tap the <b>Share</b> button (the square with an arrow pointing up) at the bottom or top of Safari.', 'Scroll down and tap <b>Add to Home Screen</b>. (If you don\'t see it, tap <b>More</b> or scroll further.)', 'Tap <b>Add</b> in the top corner.', 'Open the app from the new icon on your Home Screen. Always use that icon from now on.'];
+  } else if (/android/i.test(navigator.userAgent)) {
+    steps = ['Tap the <b>⋮ menu</b> in the top corner of Chrome.', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Tap <b>Install</b> or <b>Add</b> to confirm.', 'Open the app from the new icon on your Home Screen.'];
+  } else {
+    steps = ['In Chrome or Edge, click the <b>install icon</b> at the right of the address bar (or open the browser menu and choose <b>Install</b>).', 'Confirm by clicking <b>Install</b>.', 'On a Mac with Safari, choose <b>File → Add to Dock</b>.'];
+  }
+  return `<div class="sheet"><div class="sheet-in"><div class="sheet-head"><span style="width:60px"></span><b>Add to Home Screen</b><button data-act="install-close"><b>Done</b></button></div>
+  <div class="sheet-body stack">${note}<div class="sub">Do this once. Your entries stay on this device, so after installing, <b>keep using the Home Screen icon</b>. Data entered in the browser and data entered in the installed app are stored separately.</div>
+  <ol class="steps">${steps.map(x => `<li><div>${x}</div></li>`).join('')}</ol></div></div></div>`;
+}
 function reminderDue() {
   const s = S.settings, now = new Date(), r = rec(now);
   if (!s.reminder) return false;
@@ -350,6 +382,7 @@ function homeView() {
   const daily = dailyPerf(new Date()), trend = weeklyTrend(8);
   const needBackup = Object.keys(S.days).length > 0 && Date.now() - S.settings.lastBackup > 14 * 864e5;
   return `<h1>Pole Test Tracker</h1><div class="stack">
+    ${installDue() ? installBanner() : ''}
     ${reminderDue() ? `<div class="banner"><span>🔔 Don't forget to enter today's work.</span><button class="btn" data-act="enter-today">Enter</button></div>` : ''}
     <button class="hero" data-act="enter-today"><span class="big">⊕</span><div><b>${hasData(r) ? "Update today's work" : "Enter today's work"}</b><span>${fmt(t, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div><span style="margin-left:auto">›</span></button>
     <div><h2>This week</h2>${weekMetrics(s)}</div>
@@ -716,6 +749,7 @@ function settingsView() {
   <div class="sect-h">Appearance</div>
   <div class="sect" style="padding:12px 14px"><select id="sAppear"><option value="system" ${s.appearance === 'system' ? 'selected' : ''}>Follow device</option><option value="light" ${s.appearance === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${s.appearance === 'dark' ? 'selected' : ''}>Dark</option></select></div>
 
+  ${canInstallHere() ? `<div class="sect-h">Install</div><div class="sect" style="padding:12px 14px"><button class="btn block" data-act="${deferredInstall ? 'install-now' : 'install-help'}">📲 Add to Home Screen</button></div><div class="sect-f">Recommended: it keeps the app full screen and protects your data from Safari's 7-day clean-up.</div>` : ''}
   <div class="sect-h">Backup</div>
   <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
     <div class="small sub">${nm} day${nm === 1 ? '' : 's'} stored on this device · Last backup: ${lastB}</div>
@@ -751,7 +785,7 @@ function render() {
     <button class="btn block" data-act="add" data-name="${esc(V.menu.name)}" data-n="10" data-close="1">Add 10</button>
     ${(V.editor.qty[V.menu.name] || 0) > 0 ? `<button class="btn danger block" data-act="add" data-name="${esc(V.menu.name)}" data-n="${-(V.editor.qty[V.menu.name] || 0)}" data-close="1">Remove all</button>` : ''}
     <button class="btn block" data-act="menu-close">Cancel</button></div></div>` : '';
-  $('#app').innerHTML = `<main>${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${toast}${menu}`;
+  $('#app').innerHTML = `<main>${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${V.installHelp ? installSheet() : ''}${toast}${menu}`;
   window.scrollTo(0, sy);
   const ns = $('#edSheet'); if (ns) ns.scrollTop = ss;
 }
@@ -856,6 +890,10 @@ document.addEventListener('click', ev => {
   if (Date.now() - lastLong < 350) return;
   const d = el.dataset, a = d.act;
   switch (a) {
+    case 'install-help': V.installHelp = true; render(); break;
+    case 'install-close': V.installHelp = false; render(); break;
+    case 'install-dismiss': S.settings.installDismissed = Date.now(); save(); render(); break;
+    case 'install-now': if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; render(); }); } else { V.installHelp = true; render(); } break;
     case 'tab': V.tab = d.tab; V.sub = null; window.scrollTo(0, 0); render(); break;
     case 'enter-today': openEditor(dayKey(today())); break;
     case 'edit': openEditor(d.key); break;
