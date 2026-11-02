@@ -345,7 +345,7 @@ const sw = (id, checked, cls = '') => `<span class="switch ${cls}"><input type="
 /* ------------------------------------------------------------------ views */
 const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isIOSSafari = () => isIOS() && !/crios|fxios|edgios|opios|gsa\//i.test(navigator.userAgent);
+const inAppBrowser = () => /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|Twitter|LinkedInApp|GSA\//i.test(navigator.userAgent) || (isIOS() && !/safari\//i.test(navigator.userAgent));
 const canInstallHere = () => !isStandalone() && /^https?:$/.test(location.protocol);
 const installDue = () => canInstallHere() && Date.now() - (S.settings.installDismissed || 0) > 7 * 864e5;
 let deferredInstall = null;
@@ -358,7 +358,7 @@ function installBanner() {
 function installSheet() {
   let steps, note = '';
   if (isIOS()) {
-    if (!isIOSSafari()) note = '<div class="banner" style="margin:0"><span>⚠️ On iPhone and iPad, only <b>Safari</b> can add apps to the Home Screen. Open this page in Safari first.</span></div>';
+    if (inAppBrowser()) note = '<div class="banner" style="margin:0;align-items:flex-start;flex-direction:column"><span>⚠️ You seem to be inside another app\'s built-in browser (Messages preview, Facebook, WhatsApp, Gmail…), which can\'t add Home Screen apps. Tap <b>Open in Safari</b> (usually the compass icon or ⋯ menu), or copy the link and paste it into Safari.</span><button class="btn" data-act="copy-link">Copy link</button></div>';
     steps = ['Tap the <b>Share</b> button (the square with an arrow pointing up) at the bottom or top of Safari.', 'Scroll down and tap <b>Add to Home Screen</b>. (If you don\'t see it, tap <b>More</b> or scroll further.)', 'Tap <b>Add</b> in the top corner.', 'Open the app from the new icon on your Home Screen. Always use that icon from now on.'];
   } else if (/android/i.test(navigator.userAgent)) {
     steps = ['Tap the <b>⋮ menu</b> in the top corner of Chrome.', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Tap <b>Install</b> or <b>Add</b> to confirm.', 'Open the app from the new icon on your Home Screen.'];
@@ -891,6 +891,7 @@ document.addEventListener('click', ev => {
   const d = el.dataset, a = d.act;
   switch (a) {
     case 'install-help': V.installHelp = true; render(); break;
+    case 'copy-link': { const u = location.href.split('#')[0]; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => flash('Link copied. Paste it into Safari.')).catch(() => prompt('Copy this link and open it in Safari:', u)); break; }
     case 'install-close': V.installHelp = false; render(); break;
     case 'install-dismiss': S.settings.installDismissed = Date.now(); save(); render(); break;
     case 'install-now': if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; render(); }); } else { V.installHelp = true; render(); } break;
