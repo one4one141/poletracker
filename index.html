@@ -51,10 +51,15 @@ h3{font-size:16px;margin:0 0 8px}
 .weeknav .c{text-align:center;color:var(--text)} .weeknav .c b{display:block;font-size:17px}
 .day{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:13px;margin-bottom:8px;width:100%;border:0;text-align:left}
 .day .r{margin-left:auto;text-align:right} .day .clear{border:0;background:none;color:var(--red);padding:6px}
-.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--tab);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--tab) 86%,transparent);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .tabbar-in{display:flex;width:100%;max-width:600px}
-.tab{flex:1;border:0;background:none;padding:8px 0 7px;color:var(--grey);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px}
-.tab .e{font-size:21px;line-height:1} .tab.on{color:var(--brand)}
+.tab{flex:1;border:0;background:none;padding:7px 0 6px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:500;letter-spacing:.1px;transition:color .2s}
+.tab .pill{width:58px;height:31px;border-radius:16px;display:grid;place-items:center;transition:background .22s,transform .15s}
+.tab .pill svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:fill .2s}
+.tab:active .pill{transform:scale(.92)}
+.tab.on{color:var(--brand);font-weight:700}
+.tab.on .pill{background:color-mix(in srgb,var(--brand) 17%,transparent)}
+.tab.on .pill svg .f{fill:color-mix(in srgb,var(--brand) 30%,transparent)}
 .sheet{position:fixed;inset:0;background:var(--bg);z-index:40;overflow:auto;-webkit-overflow-scrolling:touch}
 .sheet-in{max-width:600px;margin:0 auto}
 .sheet-head{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;z-index:2}
@@ -764,9 +769,16 @@ function settingsView() {
 }
 
 /* ------------------------------------------------------------------ render */
+const ICONS = {
+  home: '<path class="f" d="M4.5 10.2 12 4l7.5 6.2V19a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 19z"/><path d="M9.8 20.5v-5.2a.8.8 0 0 1 .8-.8h2.8a.8.8 0 0 1 .8.8v5.2"/>',
+  week: '<rect class="f" x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14.2" r=".6"/><circle cx="12" cy="14.2" r=".6"/><circle cx="15.5" cy="14.2" r=".6"/><circle cx="8.5" cy="17.4" r=".6"/><circle cx="12" cy="17.4" r=".6"/>',
+  diary: '<path class="f" d="M12 6.8C10.4 5.2 8 4.6 4.5 4.6v13.2c3.5 0 5.9.6 7.5 2.2 1.6-1.6 4-2.2 7.5-2.2V4.6c-3.5 0-5.9.6-7.5 2.2z"/><path d="M12 6.8V20"/>',
+  export: '<path d="M12 15V3.8M7.8 8 12 3.8 16.2 8"/><path class="f" d="M5 12.5v5.2A2.3 2.3 0 0 0 7.3 20h9.4a2.3 2.3 0 0 0 2.3-2.3v-5.2"/>',
+  settings: '<path d="M3.5 7h8.2M16.8 7h3.7M3.5 17h3.7M12.3 17h8.2"/><circle class="f" cx="14.3" cy="7" r="2.5"/><circle class="f" cx="9.7" cy="17" r="2.5"/>'
+};
 function tabbar() {
-  const t = (id, e, l) => `<button class="tab ${V.tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}"><span class="e">${e}</span>${l}</button>`;
-  return `<nav class="tabbar"><div class="tabbar-in">${t('home', '🏠', 'Home')}${t('week', '📅', 'Week')}${t('diary', '📖', 'Diary')}${t('export', '⬆︎', 'Export')}${t('settings', '⚙︎', 'Settings')}</div></nav>`;
+  const t = (id, l) => `<button class="tab ${V.tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}" aria-label="${l}" ${V.tab === id ? 'aria-current="page"' : ''}><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]}</svg></span>${l}</button>`;
+  return `<nav class="tabbar"><div class="tabbar-in">${t('home', 'Home')}${t('week', 'Week')}${t('diary', 'Diary')}${t('export', 'Export')}${t('settings', 'Settings')}</div></nav>`;
 }
 function render() {
   document.documentElement.dataset.theme = S.settings.appearance;
