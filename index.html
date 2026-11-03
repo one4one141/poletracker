@@ -155,9 +155,9 @@ const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 const TYPES = [
   ['Stage 1',23],['Stage 1A',45],['Stage 2',60],['Stage 3',80],
-  ['Request Stage 1A',95],['Request Stage 2',114],['Request Stage 3',133],
-  ['Recovered',23],['Modified/Add Record',23],['Incomplete Test',23],
-  ['Pole Repaired',98],['PIDOC TNC DEP',45],['Request Test D',114],['Total Poles Visit (No Test)',23]
+  ['Request Stage 1A',92],['Request Stage 2',110],['Request Stage 3',130],
+  ['Recovered',22],['Modified/Add Record',22],['Incomplete Test',22],
+  ['Pole Repaired',120],['PIDOC TNC DEP',42],['Request Test D',114],['Total Poles Visit (No Test)',22]
 ].map(([name, minutes]) => ({ name, minutes, countsAsPole: true }));
 const typeNamed = n => TYPES.find(t => t.name === n);
 
