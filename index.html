@@ -150,7 +150,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-03.6';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-03.7';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -536,10 +536,10 @@ function needCard(e) {
   if (net <= 0) body = `<div class="sub">Enter your working hours above to see how much pole work you need to reach ${tp}%.</div>`;
   else if (rem <= 0.0001) { const ahead = Math.round(-rem); body = `<b style="color:var(--green)">✔ ${ahead >= 1 ? `You've reached ${tp}%, ${ahead} min ahead.` : `You're right on ${tp}%.`}</b>`; }
   else {
-    let sug = recentTypes(3).filter(t => t.minutes > 0); if (!sug.length) sug = TYPES.slice(0, 3);
+    const sug = ['Stage 1A', 'Stage 2', 'Stage 3'].map(typeNamed);
     body = `<div>${Math.ceil(rem)} min of pole work to go to reach ${tp}%.</div>` + sug.map(t => {
       const n = Math.max(1, Math.ceil(rem / t.minutes - 0.000001));
-      return `<div class="row" style="margin-top:8px"><b>${n} more ${esc(t.name)}</b><span class="small sub">(${t.minutes} min each)</span><button class="btn grow" style="flex:none;margin-left:auto" data-act="add" data-name="${esc(t.name)}" data-n="${n}">Add</button></div>`;
+      return `<div class="row" style="margin-top:8px"><b>${n} more ${esc(t.name)}</b><span class="small sub">(${t.minutes} min each)</span></div>`;
     }).join('');
   }
   return `<div class="row between" style="margin-bottom:8px"><h3 style="margin:0">🎯 What do I need?</h3>${p != null ? `<b style="color:${perfVar(p)}">Now ${pct(p)}</b>` : ''}</div>${body}`;
