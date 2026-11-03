@@ -150,7 +150,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-02.2';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-03.2';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 const TYPES = [
@@ -322,24 +322,29 @@ function lineChart(points, h = 150) {
 
 /* ------------------------------------------------------------------ update notice */
 let lastUpdCheck = 0;
+const pageBase = () => location.href.split('#')[0].split('?')[0];
 async function checkUpdate(force) {
-  if (!/^https?:$/.test(location.protocol) || navigator.onLine === false) return;
-  if (!force && Date.now() - lastUpdCheck < 30000) return;
+  if (!/^https?:$/.test(location.protocol)) return 'local';
+  if (navigator.onLine === false) return 'offline';
+  if (!force && Date.now() - lastUpdCheck < 15000) return 'skip';
   lastUpdCheck = Date.now();
   try {
-    const r = await fetch(location.href.split('#')[0].split('?')[0], { cache: 'no-store' });
-    if (!r.ok) return;
+    // unique query string + no-store: bypasses the phone's cache, the service worker cache and GitHub's CDN cache
+    const r = await fetch(pageBase() + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return 'error';
     const m = (await r.text()).match(/APP_VERSION\s*=\s*'([^']+)'/);
-    if (m && m[1] !== APP_VERSION && !V.update) { V.update = true; render(); }
-  } catch (e) {}
+    if (!m) return 'error';
+    V.latest = m[1];
+    if (m[1] !== APP_VERSION) { if (!V.update) { V.update = true; render(); } return 'new'; }
+    return 'same';
+  } catch (e) { return 'error'; }
 }
 async function applyUpdate() {
   try {
-    await fetch(location.href.split('#')[0].split('?')[0], { cache: 'reload' });
+    if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); }
     if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); }
-    if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update().catch(() => {}))); }
   } catch (e) {}
-  location.reload();
+  location.replace(pageBase() + '?v=' + Date.now());   // a brand-new address forces a fresh download
 }
 
 /* ------------------------------------------------------------------ view state */
@@ -347,7 +352,7 @@ const today = () => sod(new Date());
 const V = {
   tab: 'home', sub: null,
   weekDate: new Date(), exportDate: new Date(), month: new Date(today().getFullYear(), today().getMonth(), 1),
-  editor: null, diaryDay: null, menu: null, installHelp: false, update: false, updDismissed: false, gateSkipped: false, toast: null, calcCopied: false, calcApplied: false
+  editor: null, diaryDay: null, menu: null, installHelp: false, latest: null, updMsg: '', update: false, updDismissed: false, gateSkipped: false, toast: null, calcCopied: false, calcApplied: false
 };
 
 /* ------------------------------------------------------------------ small components */
@@ -740,6 +745,14 @@ function settingsView() {
   const s = S.settings, tm = tHours(), nm = Object.keys(S.days).length;
   const lastB = s.lastBackup ? new Date(s.lastBackup).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never';
   return `<h1>Settings</h1>
+  <div class="sect" style="padding:12px 14px;margin-bottom:4px">
+    <div class="row between">
+      <div><b>Version</b><div class="sub small mono">${APP_VERSION}</div></div>
+      ${V.update ? `<button class="btn primary" data-act="app-update">Update now</button>` : `<button class="btn" data-act="check-update">Check for updates</button>`}
+    </div>
+    ${V.update ? `<div style="margin-top:8px"><b style="color:var(--brand)">✨ New version available${V.latest ? ' (' + esc(V.latest) + ')' : ''}</b></div>` : ''}
+    ${V.updMsg ? `<div class="sub small" style="margin-top:8px">${esc(V.updMsg)}</div>` : ''}
+  </div>
   <div class="sect-h" style="margin-top:0">Work hours calculator</div>
   <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
     <label class="row between">Start <input type="time" id="cStart" value="${hhmm(s.calcStart)}" style="width:auto"></label>
@@ -1137,6 +1150,13 @@ document.addEventListener('click', ev => {
   const d = el.dataset, a = d.act;
   switch (a) {
     case 'app-update': { el.disabled = true; el.textContent = 'Updating…'; applyUpdate(); break; }
+    case 'check-update': {
+      V.updMsg = 'Checking…'; render();
+      checkUpdate(true).then(r => {
+        V.updMsg = ({ new: 'A new version is available. Tap Update now.', same: "You're on the latest version.", offline: "You're offline. Connect to the internet and try again.", local: 'Updates are checked when the app is opened from its web address.', error: "Couldn't check just now. Please try again in a moment." })[r] || '';
+        render();
+      });
+      break; }
     case 'app-update-dismiss': V.updDismissed = true; render(); break;
     case 'install-help': V.installHelp = true; render(); break;
     case 'copy-link': { const u = location.href.split('#')[0]; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => flash('Link copied. Paste it into Safari.')).catch(() => prompt('Copy this link and open it in Safari:', u)); break; }
@@ -1256,6 +1276,10 @@ function outText() { const tm = tHours(); return `${Math.floor(tm / 60)}h ${tm %
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkUpdate(); if (!V.editor && !V.diaryDay) render(); } });
   window.addEventListener('online', () => checkUpdate(true));
   setTimeout(() => checkUpdate(true), 1500);
+  window.addEventListener('focus', () => checkUpdate());
+  window.addEventListener('pageshow', () => checkUpdate());
+  setInterval(() => { if (!document.hidden) checkUpdate(); }, 5 * 60 * 1000);
+  try { if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
   render();
 })();
 })();
