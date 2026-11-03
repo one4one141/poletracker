@@ -150,16 +150,23 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-03.2';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-03.6';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
+// Pole work types and minutes per pole
 const TYPES = [
   ['Stage 1',23],['Stage 1A',45],['Stage 2',60],['Stage 3',80],
   ['Request Stage 1A',92],['Request Stage 2',110],['Request Stage 3',130],
   ['Recovered',22],['Modified/Add Record',22],['Incomplete Test',22],
-  ['Pole Repaired',120],['PIDOC TNC DEP',42],['Request Test D',114],['Total Poles Visit (No Test)',22]
+  ['Pole Repaired',120],['PIDOC TNC DEP',42],['Request Test D',114]
 ].map(([name, minutes]) => ({ name, minutes, countsAsPole: true }));
-const typeNamed = n => TYPES.find(t => t.name === n);
+// Safety net: types no longer offered (or from a short-lived newer version). Days saved with them still open and save correctly.
+const LEGACY = [['Total Poles Visit (No Test)', 23], ['Request Test Stage 1', 75], ['Revalidation Stage 1', 23], ['Revalidation Stage 1A', 45], ['Revalidation Stage 2', 60], ['Revalidation Stage 3', 80], ['Recover Stage 1', 23], ['Recover Stage 1A', 45], ['Recover Stage 2', 60], ['Recover Stage 3', 80], ['Asset Validation Stage 1', 23], ['Asset Validation Stage 1A', 45], ['Asset Validation Stage 2', 60], ['Asset Validation Stage 3', 80], ['Add Record', 22], ['Modify Record', 22], ['Pole in danger of Collapse', 42]].map(([name, minutes]) => ({ name, minutes, countsAsPole: true, legacy: true }));
+const ALLTYPES = TYPES.concat(LEGACY);
+const typeNamed = n => ALLTYPES.find(t => t.name === n);
+// Names from that newer version -> the original names (applied to saved data and restored backups)
+const RENAME = { 'Periodic Stage 1': 'Stage 1', 'Periodic Stage 1A': 'Stage 1A', 'Periodic Stage 2': 'Stage 2', 'Periodic Stage 3': 'Stage 3', 'Request Test Stage 1A': 'Request Stage 1A', 'Request Test Stage 2': 'Request Stage 2', 'Request Test Stage 3': 'Request Stage 3', 'Pole Recovered': 'Recovered', 'Incomplete': 'Incomplete Test', 'Request Test D Pole': 'Request Test D' };
+const canon = n => RENAME[n] || n;
 
 const DEFAULTS = {
   target: 100, amber: 85, lunch: 40, appearance: 'system', reportName: '', reportRoute: '',
@@ -171,7 +178,7 @@ let S = load();
 function load() {
   try {
     const r = JSON.parse(localStorage.getItem(LS) || 'null');
-    if (r && r.days) return { days: r.days, settings: { ...DEFAULTS, ...(r.settings || {}) } };
+    if (r && r.days) { Object.values(r.days).forEach(d => (d.activities || []).forEach(a => { a.typeName = canon(a.typeName); })); return { days: r.days, settings: { ...DEFAULTS, ...(r.settings || {}) } }; }
   } catch (e) {}
   return { days: {}, settings: { ...DEFAULTS } };
 }
@@ -510,15 +517,17 @@ function newEditor(key) {
     comments: r?.comments || '', qty: {}, tUsed: false
   };
   (r?.activities || []).forEach(a => { e.qty[a.typeName] = (e.qty[a.typeName] || 0) + a.quantity; });
+  e.origMin = {}; (r?.activities || []).forEach(a => { if (a.minutesEach != null) e.origMin[a.typeName] = a.minutesEach; });
   e.initial = edSig(e);
   return e;
 }
 const edSig = e => JSON.stringify([e.dayOff, e.overtime, e.working, e.down, e.comments, e.qty]);
 const parseNum = t => { const c = String(t).trim().replace(',', '.'); if (!c) return 0; const n = Number(c); return isNaN(n) ? null : n; };
-const edDraftBudget = e => TYPES.reduce((s, t) => s + t.minutes * (e.qty[t.name] || 0) / 60, 0);
+const minFor = (e, t) => (e.origMin && e.origMin[t.name] != null) ? e.origMin[t.name] : t.minutes;
+const edDraftBudget = e => ALLTYPES.reduce((s, t) => s + minFor(e, t) * (e.qty[t.name] || 0) / 60, 0);
 const edNet = e => (parseNum(e.working) || 0) - (parseNum(e.down) || 0);
 const edPerf = e => { const n = edNet(e); return n > 0 ? edDraftBudget(e) / n : null; };
-const edPoles = e => TYPES.reduce((s, t) => s + (t.countsAsPole ? (e.qty[t.name] || 0) : 0), 0);
+const edPoles = e => ALLTYPES.reduce((s, t) => s + (t.countsAsPole ? (e.qty[t.name] || 0) : 0), 0);
 
 function needCard(e) {
   const net = edNet(e), tp = Math.round(target() * 100), p = edPerf(e);
@@ -546,7 +555,7 @@ function tHours(e) {
 }
 function editorView() {
   const e = V.editor, date = parseKey(e.key), prev = previousWork(date);
-  const used = TYPES.some(t => e.qty[t.name] > 0);
+  const used = ALLTYPES.some(t => e.qty[t.name] > 0);
   const tm = tHours(e);
   return `<div class="sheet" id="edSheet"><div class="sheet-in">
     <div class="sheet-head"><button data-act="ed-cancel">Cancel</button><b>Daily Work</b><button data-act="ed-save"><b>Save</b></button></div>
@@ -571,6 +580,7 @@ function editorView() {
         ${!used && prev ? `<button class="btn block" data-act="copy-prev" data-key="${prev.key}">⧉ Copy from ${fmt(recDate(prev), { weekday: 'short', day: 'numeric', month: 'short' })}</button>` : ''}
         <div class="card" id="needCard">${needCard(e)}</div>
         <div class="grid2">${TYPES.map(t => tile(e, t)).join('')}</div>
+        ${LEGACY.some(t => e.qty[t.name] > 0) ? `<div class="sect-h" style="margin:8px 4px 0">Earlier entry types</div><div class="grid2">${LEGACY.filter(t => e.qty[t.name] > 0).map(t => tile(e, t)).join('')}</div>` : ''}
         ${used ? `<div class="card" id="previewCard">${previewCard(e)}</div>` : ''}
       </div>`}
       <div><h2>Comments</h2><textarea id="edComments">${esc(e.comments)}</textarea></div>
@@ -581,7 +591,7 @@ function editorView() {
 }
 function tile(e, t) {
   const n = e.qty[t.name] || 0, sel = n > 0;
-  return `<div class="tile ${sel ? 'sel' : ''}"><button class="name" data-act="tile" data-name="${esc(t.name)}">${esc(t.name)}</button><div class="min">${t.minutes} min</div>
+  return `<div class="tile ${sel ? 'sel' : ''}"><button class="name" data-act="tile" data-name="${esc(t.name)}">${esc(t.name)}</button><div class="min">${t.code ? esc(t.code) + ' · ' : ''}${minFor(e, t)} min</div>
     ${sel ? `<div class="step"><button data-act="add" data-name="${esc(t.name)}" data-n="-1" aria-label="Remove one">−</button><b class="mono">${n}</b><button data-act="add" data-name="${esc(t.name)}" data-n="1" aria-label="Add one">+</button></div>` : ''}</div>`;
 }
 function edAdjust(name, d) {
@@ -601,11 +611,11 @@ function edSave() {
     w = parseNum(e.working); dn = parseNum(e.down);
     if (w == null) return alert("Working hours isn't a valid number.");
     if (dn == null) return alert("Downtime hours isn't a valid number.");
-    if (w === 0 && !TYPES.some(t => e.qty[t.name] > 0)) return alert('Add some hours or pole work, or turn on Day Off.');
+    if (w === 0 && !ALLTYPES.some(t => e.qty[t.name] > 0)) return alert('Add some hours or pole work, or turn on Day Off.');
     if (w > 24) return alert("Working hours can't be more than 24.");
     if (dn > w) return alert("Downtime can't be more than working hours.");
   }
-  const acts = e.dayOff ? [] : TYPES.filter(t => e.qty[t.name] > 0).map(t => ({ typeName: t.name, quantity: e.qty[t.name], minutesEach: t.minutes, countsAsPole: t.countsAsPole }));
+  const acts = e.dayOff ? [] : ALLTYPES.filter(t => e.qty[t.name] > 0).map(t => ({ typeName: t.name, quantity: e.qty[t.name], minutesEach: minFor(e, t), countsAsPole: t.countsAsPole }));
   saveDay(e.key, { actualHours: e.dayOff ? 0 : Math.max(0, w), downtimeHours: e.dayOff ? 0 : Math.max(0, dn), activities: acts, isDayOff: e.dayOff, isOvertime: e.overtime && !e.dayOff, comments: e.comments.trim() || null });
   V.editor = null; render();
 }
@@ -1129,7 +1139,7 @@ function importJSON(text) {
     const key = dayKey(d);
     S.days[key] = mkDay(key, {
       id: o.id || uuid(), actualHours: Number(o.actualHours) || 0, downtimeHours: Number(o.downtimeHours) || 0,
-      activities: (o.activities || []).map(a => ({ id: a.id, typeName: a.typeName, quantity: Number(a.quantity) || 0, minutesEach: a.minutesEach ?? undefined, countsAsPole: a.countsAsPole ?? undefined })),
+      activities: (o.activities || []).map(a => ({ id: a.id, typeName: canon(a.typeName), quantity: Number(a.quantity) || 0, minutesEach: a.minutesEach ?? undefined, countsAsPole: a.countsAsPole ?? undefined })),
       isDayOff: !!o.isDayOff, isOvertime: !!o.isOvertime, comments: o.comments || null
     }); n++;
   });
