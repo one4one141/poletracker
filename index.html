@@ -130,6 +130,16 @@ svg text{fill:var(--sub);font-size:10px}
 .gate-warn{background:color-mix(in srgb,var(--orange) 15%,var(--card));border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:14px 0 16px;color:var(--text)}
 .gate-card .btn.primary{padding:15px;font-size:17px;border-radius:14px}
 .gate-skip{display:block;margin:12px auto 0;border:0;background:none;color:var(--sub);font-size:13.5px;text-decoration:underline;padding:8px}
+.acc{background:var(--card);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.acc-h{width:100%;border:0;background:none;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left}
+.acc-ic{width:38px;height:38px;border-radius:11px;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);display:grid;place-items:center;flex:none}
+.acc-ic svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.acc-ic.red{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.acc-t{flex:1;min-width:0}.acc-t b{display:block;font-size:16px}.acc-t span{display:block;font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-chev{color:var(--sub);font-size:20px;transition:transform .2s;flex:none}.acc.open .acc-chev{transform:rotate(90deg)}
+.acc-b{padding:12px 14px 14px;border-top:1px solid var(--line);animation:accIn .18s ease-out}
+@keyframes accIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.acc-note{font-size:13px;color:var(--sub);margin-top:10px}
 .updbar{position:sticky;top:calc(6px + env(safe-area-inset-top));z-index:15;background:var(--brand);color:#fff;border-radius:14px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .updbar span{flex:1;font-weight:600;font-size:15px;line-height:1.25} .updbar small{display:block;font-weight:400;opacity:.85;font-size:12px}
 .updbar .btn{background:#fff;color:var(--brand);padding:8px 14px} .updbar .x{background:none;border:0;color:#fff;opacity:.8;font-size:20px;padding:4px 6px}
@@ -150,7 +160,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-03.7';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-04.1';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -359,7 +369,7 @@ const today = () => sod(new Date());
 const V = {
   tab: 'home', sub: null,
   weekDate: new Date(), exportDate: new Date(), month: new Date(today().getFullYear(), today().getMonth(), 1),
-  editor: null, diaryDay: null, menu: null, installHelp: false, latest: null, updMsg: '', update: false, updDismissed: false, gateSkipped: false, toast: null, calcCopied: false, calcApplied: false
+  editor: null, diaryDay: null, menu: null, installHelp: false, setOpen: null, latest: null, updMsg: '', update: false, updDismissed: false, gateSkipped: false, toast: null, calcCopied: false, calcApplied: false
 };
 
 /* ------------------------------------------------------------------ small components */
@@ -751,11 +761,57 @@ function monthlyView() {
 }
 
 /* -------- settings */
+const SICON = {
+  calc: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  targets: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>',
+  reminder: '<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
+  report: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><circle cx="9" cy="11.5" r="2"/><path d="M6.3 16c.5-1.6 1.6-2.3 2.7-2.3s2.2.7 2.7 2.3M14 10h4M14 13h3"/>',
+  appear: '<circle cx="12" cy="12" r="3.8"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M6 18l1.4-1.4M16.6 7.4 18 6"/>',
+  install: '<rect x="7" y="3.5" width="10" height="17" rx="2.5"/><path d="M12 9v5M9.5 11.5h5"/>',
+  backup: '<path d="M4 7.5h16v3H4z"/><path d="M5.5 10.5V18a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-7.5M10 14h4"/>',
+  danger: '<path d="M5 7h14M9.5 7V5h5v2M7 7l.8 11.5a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L17 7"/>'
+};
+function acc(id, title, summary, body, red) {
+  const open = V.setOpen === id;
+  return `<div class="acc ${open ? 'open' : ''}" id="acc-${id}"><button class="acc-h" data-act="sec-toggle" data-sec="${id}" aria-expanded="${open}"><span class="acc-ic ${red ? 'red' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true">${SICON[id]}</svg></span><span class="acc-t"><b${red ? ' style="color:var(--red)"' : ''}>${title}</b><span>${summary}</span></span><span class="acc-chev">›</span></button>${open ? `<div class="acc-b">${body}</div>` : ''}</div>`;
+}
 function settingsView() {
   const s = S.settings, tm = tHours(), nm = Object.keys(S.days).length;
   const lastB = s.lastBackup ? new Date(s.lastBackup).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never';
+  const appearName = { system: 'Follow device', light: 'Light', dark: 'Dark' }[s.appearance] || 'Follow device';
+  const who = [s.reportName.trim(), s.reportRoute.trim()].filter(Boolean).map(esc).join(' · ');
+  const calc = `<div class="stack" style="gap:10px">
+    <label class="row between">Start <input type="time" id="cStart" value="${hhmm(s.calcStart)}" style="width:auto"></label>
+    <label class="row between">Finish <input type="time" id="cEnd" value="${hhmm(s.calcEnd)}" style="width:auto"></label>
+    <label class="row between"><span>🍴 Lunch (−${s.lunch} min)</span>${sw('cLunch', s.calcLunch)}</label>
+    <div class="row between"><div><b style="font-size:20px" id="cOut1">${Math.floor(tm / 60)}h ${tm % 60}m</b><div class="sub mono" id="cOut2">${hrs(tm / 60, 2)} hrs</div></div><button class="btn" data-act="calc-copy">${V.calcCopied ? '✔ Copied' : 'Copy'}</button></div>
+    <button class="btn primary block" data-act="calc-today" ${tm === 0 ? 'disabled' : ''}>${V.calcApplied ? '✔ Saved to today' : '＋ Use for today'}</button>
+  </div><div class="acc-note">“Use for today” sets today's working hours. Copy gives you the decimal hours to paste into any other day.</div>`;
+  const targets = `<div class="stack" style="gap:10px">
+    <label class="row between">Target (green) %<input type="number" id="sTarget" value="${s.target}" min="50" max="150" style="width:90px"></label>
+    <label class="row between">Amber from %<input type="number" id="sAmber" value="${s.amber}" min="0" max="150" style="width:90px"></label>
+    <label class="row between">Lunch (minutes)<input type="number" id="sLunch" value="${s.lunch}" min="0" max="120" style="width:90px"></label>
+    <button class="btn" data-act="reset-targets">Reset to 100% and 85%</button>
+  </div><div class="acc-note">At or above the target is green, at or above the amber level is orange, and below it is red. This applies to the app and the reports.</div>`;
+  const reminder = `<div class="stack" style="gap:10px">
+    <label class="row between">In-app reminder${sw('rOn', s.reminder)}</label>
+    ${s.reminder ? `<label class="row between">After<input type="time" id="rTime" value="${hhmm(s.reminderMin)}" style="width:auto"></label>` : ''}
+  </div><div class="acc-note">A web app can't send notifications while it's closed, so this shows a banner on the Home screen on weekdays after the chosen time, until today is entered or marked as a day off.</div>`;
+  const report = `<div class="stack" style="gap:10px">
+    <input type="text" id="sName" placeholder="Your name" value="${esc(s.reportName)}" autocomplete="name">
+    <input type="text" id="sRoute" placeholder="Employee number" value="${esc(s.reportRoute)}">
+  </div><div class="acc-note">Printed at the top of exported PDFs. Leave blank to hide.</div>`;
+  const appear = `<select id="sAppear"><option value="system" ${s.appearance === 'system' ? 'selected' : ''}>Follow device</option><option value="light" ${s.appearance === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${s.appearance === 'dark' ? 'selected' : ''}>Dark</option></select>`;
+  const install = `<button class="btn primary block" data-act="${deferredInstall ? 'install-now' : 'install-help'}">📲 ${deferredInstall ? 'Install the app' : 'Show me how'}</button><div class="acc-note">Recommended: it keeps the app full screen and protects your data from Safari's 7-day clean-up.</div>`;
+  const backup = `<div class="stack" style="gap:10px">
+    <div class="small sub">${nm} day${nm === 1 ? '' : 's'} stored on this device · Last backup: ${lastB}</div>
+    <button class="btn primary block" data-act="backup">⬇︎ Back up all data (zip)</button>
+    <button class="btn block" data-act="backup-share">⬆︎ Share backup…</button>
+    <button class="btn block" data-act="restore">⤴ Restore from backup</button>
+  </div><div class="acc-note">Backups are a .zip file in the same format as your iPhone app, so a backup from either one can be restored in the other. Restoring merges into your current data; days on the same date are replaced by the backup. Back up regularly: browsers can clear site data.</div>`;
+  const danger = `<button class="btn danger block" data-act="wipe">Delete all data on this device</button><div class="acc-note">This permanently removes every entry stored on this device. Make a backup first if you are unsure.</div>`;
   return `<h1>Settings</h1>
-  <div class="sect" style="padding:12px 14px;margin-bottom:4px">
+  <div class="sect" style="padding:12px 14px;margin-bottom:14px">
     <div class="row between">
       <div><b>Version</b><div class="sub small mono">${APP_VERSION}</div></div>
       ${V.update ? `<button class="btn primary" data-act="app-update">Update now</button>` : `<button class="btn" data-act="check-update">Check for updates</button>`}
@@ -763,55 +819,14 @@ function settingsView() {
     ${V.update ? `<div style="margin-top:8px"><b style="color:var(--brand)">✨ New version available${V.latest ? ' (' + esc(V.latest) + ')' : ''}</b></div>` : ''}
     ${V.updMsg ? `<div class="sub small" style="margin-top:8px">${esc(V.updMsg)}</div>` : ''}
   </div>
-  <div class="sect-h" style="margin-top:0">Work hours calculator</div>
-  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
-    <label class="row between">Start <input type="time" id="cStart" value="${hhmm(s.calcStart)}" style="width:auto"></label>
-    <label class="row between">Finish <input type="time" id="cEnd" value="${hhmm(s.calcEnd)}" style="width:auto"></label>
-    <label class="row between"><span>🍴 Lunch (−${s.lunch} min)</span>${sw('cLunch', s.calcLunch)}</label>
-    <div class="row between"><div><b style="font-size:20px" id="cOut1">${Math.floor(tm / 60)}h ${tm % 60}m</b><div class="sub mono" id="cOut2">${hrs(tm / 60, 2)} hrs</div></div><button class="btn" data-act="calc-copy">${V.calcCopied ? '✔ Copied' : 'Copy'}</button></div>
-    <button class="btn primary block" data-act="calc-today" ${tm === 0 ? 'disabled' : ''}>${V.calcApplied ? '✔ Saved to today' : '＋ Use for today'}</button>
-  </div></div>
-  <div class="sect-f">“Use for today” sets today's working hours. Copy gives you the decimal hours to paste into any other day.</div>
-
-  <div class="sect-h">Performance targets</div>
-  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
-    <label class="row between">Target (green) %<input type="number" id="sTarget" value="${s.target}" min="50" max="150" style="width:90px"></label>
-    <label class="row between">Amber from %<input type="number" id="sAmber" value="${s.amber}" min="0" max="150" style="width:90px"></label>
-    <label class="row between">Lunch (minutes)<input type="number" id="sLunch" value="${s.lunch}" min="0" max="120" style="width:90px"></label>
-    <button class="btn" data-act="reset-targets">Reset to 100% and 85%</button>
-  </div></div>
-  <div class="sect-f">At or above the target is green, at or above the amber level is orange, and below it is red. This applies to the app and the reports.</div>
-
-  <div class="sect-h">Reminder</div>
-  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
-    <label class="row between">In-app reminder${sw('rOn', s.reminder)}</label>
-    ${s.reminder ? `<label class="row between">After<input type="time" id="rTime" value="${hhmm(s.reminderMin)}" style="width:auto"></label>` : ''}
-  </div></div>
-  <div class="sect-f">A web app can't send notifications while it's closed, so this shows a banner on the Home screen on weekdays after the chosen time, until today is entered or marked as a day off.</div>
-
-  <div class="sect-h">Report details</div>
-  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
-    <input type="text" id="sName" placeholder="Your name" value="${esc(s.reportName)}" autocomplete="name">
-    <input type="text" id="sRoute" placeholder="Employee number" value="${esc(s.reportRoute)}">
-  </div></div>
-  <div class="sect-f">Printed at the top of exported PDFs. Leave blank to hide.</div>
-
-  <div class="sect-h">Appearance</div>
-  <div class="sect" style="padding:12px 14px"><select id="sAppear"><option value="system" ${s.appearance === 'system' ? 'selected' : ''}>Follow device</option><option value="light" ${s.appearance === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${s.appearance === 'dark' ? 'selected' : ''}>Dark</option></select></div>
-
-  ${canInstallHere() ? `<div class="sect-h">Install</div><div class="sect" style="padding:12px 14px"><button class="btn block" data-act="${deferredInstall ? 'install-now' : 'install-help'}">📲 Add to Home Screen</button></div><div class="sect-f">Recommended: it keeps the app full screen and protects your data from Safari's 7-day clean-up.</div>` : ''}
-  <div class="sect-h">Backup</div>
-  <div class="sect" style="padding:12px 14px"><div class="stack" style="gap:10px">
-    <div class="small sub">${nm} day${nm === 1 ? '' : 's'} stored on this device · Last backup: ${lastB}</div>
-    <button class="btn primary block" data-act="backup">⬇︎ Back up all data (zip)</button>
-    <button class="btn block" data-act="backup-share">⬆︎ Share backup…</button>
-    <button class="btn block" data-act="restore">⤴ Restore from backup</button>
-  </div></div>
-  <div class="sect-f">Backups are a .zip file in the same format as your iPhone app, so a backup from either one can be restored in the other. Restoring merges into your current data; days on the same date are replaced by the backup. Back up regularly: browsers can clear site data.</div>
-
-  <div class="sect-h">Danger zone</div>
-  <div class="sect" style="padding:12px 14px"><button class="btn danger block" data-act="wipe">Delete all data on this device</button></div>
-
+  ${acc('calc', 'Work hours calculator', `${Math.floor(tm / 60)}h ${tm % 60}m · ${hrs(tm / 60, 2)} hrs`, calc)}
+  ${acc('targets', 'Performance targets', `Target ${s.target}% · Amber ${s.amber}% · Lunch ${s.lunch} min`, targets)}
+  ${acc('reminder', 'Reminder', s.reminder ? `On · after ${hhmm(s.reminderMin)}` : 'Off', reminder)}
+  ${acc('report', 'Report details', who || 'Not set', report)}
+  ${acc('appear', 'Appearance', appearName, appear)}
+  ${canInstallHere() ? acc('install', 'Add to Home Screen', 'Recommended', install) : ''}
+  ${acc('backup', 'Backup & restore', `${nm} day${nm === 1 ? '' : 's'} · Last backup: ${lastB}`, backup)}
+  ${acc('danger', 'Delete all data', 'Remove everything on this device', danger, true)}
   <div style="text-align:center;margin:30px 0 6px"><div style="font-weight:700;letter-spacing:.2px">Pole Test Tracker</div><div class="sub small" style="margin-top:4px">Designed by Luke Smith</div></div>`;
 }
 
@@ -1160,6 +1175,7 @@ document.addEventListener('click', ev => {
   const d = el.dataset, a = d.act;
   switch (a) {
     case 'app-update': { el.disabled = true; el.textContent = 'Updating…'; applyUpdate(); break; }
+    case 'sec-toggle': { V.setOpen = V.setOpen === d.sec ? null : d.sec; V.calcCopied = V.calcApplied = false; render(); if (V.setOpen) { const h = document.getElementById('acc-' + V.setOpen); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } break; }
     case 'check-update': {
       V.updMsg = 'Checking…'; render();
       checkUpdate(true).then(r => {
