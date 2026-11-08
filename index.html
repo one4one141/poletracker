@@ -175,7 +175,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-08.4';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-08.5';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -1213,7 +1213,7 @@ function askDmoPassword() {
   d.querySelector('[data-pw="cancel"]').addEventListener('click', close);
   card.addEventListener('submit', e => {
     e.preventDefault();
-    if (cyrb53(input.value.trim(), 7) === DMO_HASH) { close(); Viewer.open('Project 1', DMO_URL); }
+    if (cyrb53(input.value.trim(), 7) === DMO_HASH) { close(); const l = document.createElement('a'); l.href = DMO_URL; l.target = '_blank'; l.rel = 'noopener'; document.body.appendChild(l); l.click(); l.remove(); }
     else { err.textContent = 'Incorrect password. Please try again.'; input.value = ''; input.focus(); card.classList.remove('pw-shake'); void card.offsetWidth; card.classList.add('pw-shake'); try { navigator.vibrate && navigator.vibrate(40); } catch (x) {} }
   });
   setTimeout(() => input.focus(), 50);
