@@ -175,7 +175,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-08.5';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-08.6';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -844,7 +844,7 @@ function settingsView() {
   ${canInstallHere() ? acc('install', 'Add to Home Screen', 'Recommended', install) : ''}
   ${acc('backup', 'Backup & restore', `${nm} day${nm === 1 ? '' : 's'} · Last backup: ${lastB}`, backup)}
   ${acc('danger', 'Delete all data', 'Remove everything on this device', danger, true)}
-  <button class="acc acc-h" style="display:flex;margin-bottom:10px;border-radius:14px;background:var(--card)" data-act="dmo"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${SICON.lock}</svg></span><span class="acc-t"><b>Project 1</b><span>Password required</span></span><span class="acc-chev">›</span></button>
+  <button class="acc acc-h" style="display:flex;margin-bottom:10px;border-radius:14px;background:var(--card)" data-act="dmo"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${SICON.lock}</svg></span><span class="acc-t"><b>Project</b><span>Password required</span></span><span class="acc-chev">›</span></button>
   <div style="text-align:center;margin:30px 0 6px"><div style="font-weight:700;letter-spacing:.2px">Pole Test Tracker</div><div class="sub small egg" data-act="egg" style="margin-top:0">Designed by Luke Smith</div></div>`;
 }
 
@@ -1198,11 +1198,11 @@ const Viewer = {
 /* ------------------------------------------------------------------ password prompt (casual protection only: the hash is visible to anyone who views the page source) */
 const cyrb53 = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return 4294967296 * (2097151 & h2) + (h1 >>> 0); };
 const DMO_HASH = 5041428204855773;
-const DMO_URL = 'https://one4one141.github.io/poletracker/DMO_Pole_Tracker_Updated.html';
+const DMO_URL = 'https://one4one141.github.io/pole-tracker/?utm_source=chatgpt.com';
 function askDmoPassword() {
   if (document.getElementById('pwBox')) return;
   const d = document.createElement('div'); d.id = 'pwBox'; d.className = 'pw-back';
-  d.innerHTML = `<form class="pw-card" autocomplete="off"><h3>Project 1</h3><div class="sub small">Enter the password to open it.</div>
+  d.innerHTML = `<form class="pw-card" autocomplete="off"><h3>Project</h3><div class="sub small">Enter the password to open it.</div>
     <input type="password" id="pwIn" placeholder="Password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-top:12px" aria-label="Password">
     <div class="pw-err" id="pwErr" role="alert"></div>
     <div class="row"><button type="button" class="btn" data-pw="cancel">Cancel</button><button type="submit" class="btn primary">Open</button></div></form>`;
