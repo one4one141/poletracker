@@ -51,7 +51,9 @@ h3{font-size:16px;margin:0 0 8px}
 .weeknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:var(--brand)}
 .weeknav .c{text-align:center;color:var(--text)} .weeknav .c b{display:block;font-size:17px}
 .day{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:13px;margin-bottom:8px;width:100%;border:0;text-align:left}
-.day .r{margin-left:auto;text-align:right} .day .clear{border:0;background:none;color:var(--red);padding:6px}
+.day .r{margin-left:auto;text-align:right}
+.daywrap{position:relative;margin-bottom:8px;border-radius:12px;overflow:hidden}.daywrap .day{margin-bottom:0;position:relative;touch-action:pan-y}
+.dayclear{position:absolute;inset:0;background:var(--red);color:#fff;font-weight:700;display:none;align-items:center;justify-content:flex-end;padding-right:20px;gap:8px}.daywrap.sw .dayclear{display:flex}
 .tabbar{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--tab) 86%,transparent);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .tabbar-in{display:flex;width:100%;max-width:600px}
 .tab{flex:1;border:0;background:none;padding:7px 0 6px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:500;letter-spacing:.1px;transition:color .2s}
@@ -175,7 +177,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-08.7';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-09.1';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -480,7 +482,9 @@ function dayRow(date) {
   if (r && r.isDayOff) right = `<b class="sub">Day Off</b>`;
   else if (r && (r.actualHours > 0 || r.activities.length)) right = `<div><b>${polesOf(r)} poles</b> <b class="mono" style="color:${perfVar(perfOf(r))}">${pct(perfOf(r))}</b><div class="small sub">${hrs(netH(r))} net hrs</div></div>`;
   else right = `<span class="sub">Not entered</span>`;
-  return `<div class="day" data-act="edit" data-key="${k}" role="button"><div><b>${fmt(date, { weekday: 'long' })}</b><div class="sub small">${dm(date)}</div></div><div class="r">${right}</div>${hasData(r) ? `<button class="clear" data-act="clear" data-key="${k}" aria-label="Clear day">🗑</button>` : ''}<span class="sub">›</span></div>`;
+  const has = hasData(r);
+  const row = `<div class="day" data-act="edit" data-key="${k}" role="button"><div><b>${fmt(date, { weekday: 'long' })}</b><div class="sub small">${dm(date)}</div></div><div class="r">${right}</div><span class="sub">›</span></div>`;
+  return has ? `<div class="daywrap" data-key="${k}"><div class="dayclear" aria-hidden="true">Clear day</div>${row}</div>` : `<div class="daywrap">${row}</div>`;
 }
 
 /* -------- diary */
@@ -1473,12 +1477,11 @@ const Game = (() => {
 })();
 
 /* ------------------------------------------------------------------ events */
-let lastLong = 0, eggN = 0, eggT = 0;
+let lastLong = 0, lastSwipe = 0, eggN = 0, eggT = 0;
 function openEditor(key) { V.editor = newEditor(key); V.menu = null; render(); }
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-act]'); if (!el) return;
-  if (el.dataset.act === 'clear') ev.stopPropagation();
-  if (Date.now() - lastLong < 350) return;
+  if (Date.now() - lastLong < 350 || Date.now() - lastSwipe < 400) return;
   const d = el.dataset, a = d.act;
   switch (a) {
     case 'app-update': { el.disabled = true; el.textContent = 'Updating…'; applyUpdate(); break; }
@@ -1506,10 +1509,6 @@ document.addEventListener('click', ev => {
     case 'xweek': V.exportDate = addDays(weekStart(V.exportDate), 7 * Number(d.n)); render(); break;
     case 'month': V.month = new Date(V.month.getFullYear(), V.month.getMonth() + Number(d.n), 1); render(); break;
     case 'month-today': V.month = new Date(today().getFullYear(), today().getMonth(), 1); render(); break;
-    case 'clear': {
-      const r = S.days[d.key]; if (!r) break;
-      if (confirm(`Clear ${fmt(parseKey(d.key), { weekday: 'long', day: 'numeric', month: 'long' })}?\n\nThis removes the hours, pole work and comments for this day. You can undo it for a few seconds afterwards.`)) { deleteDay(d.key); render(); }
-      break; }
     case 'undo': undoDelete(); break;
     case 'diary-day': { const r = S.days[d.key]; V.diaryDay = { key: d.key, overtime: r?.isOvertime || false, notes: r?.comments || '' }; render(); break; }
     case 'diary-cancel': V.diaryDay = null; render(); break;
@@ -1542,6 +1541,37 @@ document.addEventListener('click', ev => {
     case 'wipe': if (confirm('Delete ALL data on this device? This cannot be undone.\n\nMake a backup first if you are unsure.') && confirm('Really delete everything?')) { S.days = {}; save(); render(); } break;
   }
 });
+
+/* swipe a day left (Week page) to clear it */
+(() => {
+  let g = null;
+  document.addEventListener('pointerdown', ev => {
+    const w = ev.target.closest('.daywrap[data-key]'); if (!w || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    g = { w, day: w.querySelector('.day'), x: ev.clientX, y: ev.clientY, dx: 0, on: false, id: ev.pointerId };
+  });
+  document.addEventListener('pointermove', ev => {
+    if (!g || ev.pointerId !== g.id) return;
+    const dx = ev.clientX - g.x, dy = ev.clientY - g.y;
+    if (!g.on) { if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) { g.on = true; g.w.classList.add('sw'); try { g.day.setPointerCapture(ev.pointerId); } catch (e) {} } else if (Math.abs(dy) > 14) { g = null; return; } else return; }
+    g.dx = Math.min(0, dx); g.day.style.transition = 'none'; g.day.style.transform = `translateX(${g.dx}px)`;
+  });
+  const end = ev => {
+    if (!g || ev.pointerId !== g.id) return;
+    const x = g, full = x.w.offsetWidth; g = null;
+    if (!x.on) return;
+    lastSwipe = Date.now();
+    const key = x.w.dataset.key, pass = ev.type === 'pointerup' && -x.dx > Math.min(110, full * 0.35);
+    x.day.style.transition = 'transform .18s'; x.day.style.transform = pass ? `translateX(-${full}px)` : '';
+    setTimeout(() => {
+      x.day.style.transition = ''; x.day.style.transform = '';
+      if (!pass) { x.w.classList.remove('sw'); return; }
+      const r = S.days[key];
+      if (r && confirm(`Clear ${fmt(parseKey(key), { weekday: 'long', day: 'numeric', month: 'long' })}?\n\nThis removes the hours, pole work and comments for this day. You can undo it for a few seconds afterwards.`)) deleteDay(key);
+      render();
+    }, pass ? 190 : 0);
+  };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+})();
 
 /* long-press on pole tiles opens "Add 5 / Add 10 / Remove all" */
 let lpTimer = null;
