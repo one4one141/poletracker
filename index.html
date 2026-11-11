@@ -137,6 +137,9 @@ svg text{fill:var(--sub);font-size:10px}
 @keyframes pwShake{0%,100%{transform:none}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}.pw-shake{animation:pwShake .3s}
 .gamewrap{position:fixed;inset:0;z-index:200;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .gamewrap canvas{display:block;touch-action:none}
+.gjump{position:absolute;left:50%;bottom:calc(34px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:3;display:none;min-width:150px;height:62px;border-radius:31px;border:0;background:#ffd84a;color:#1b1b1b;font:800 20px -apple-system,system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.45);touch-action:manipulation}
+.gjump.on{display:block;animation:gjp .5s infinite alternate}.gjump.dim{opacity:.55;animation:none;display:block}
+@keyframes gjp{to{transform:translateX(-50%) scale(1.08)}}
 .gclose{position:absolute;top:calc(8px + env(safe-area-inset-top));left:10px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.4);color:#fff;font-size:20px;z-index:2}
 .egg{display:inline-block;padding:8px 18px;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-touch-callout:none}
 .gate{position:fixed;inset:0;z-index:100;background:rgba(18,20,26,.6);-webkit-backdrop-filter:grayscale(1) blur(7px);backdrop-filter:grayscale(1) blur(7px);display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom));overflow:auto}
@@ -177,7 +180,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-09.2';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-11.2';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -1227,6 +1230,11 @@ function askDmoPassword() {
 const Game = (() => {
   const STEP = 60, PW = 30;
   let root, cv, cx, W = 0, H = 0, dpr = 1, raf = 0, last = 0, safeTop = 0, isOpen = false, clouds = [], stars = [];
+  let flyMsg = 0, flyShown = false, lineMsg = 0, lineShown = false, jumpT = 0, jumpBtn;
+  const LINE_FROM = 400;   // from 200 m: power lines to jump over (a line every 14 steps = 7 m)
+  const lineAt = i => i >= LINE_FROM && i % 14 === 6 && !ARM(i);
+  const nearLine = i => lineAt(i - 2) || lineAt(i - 1) || lineAt(i) || lineAt(i + 1) || lineAt(i + 2);   // keep birds, nests and hammers well away
+  const FLY_FROM = 200, FLY_A = 46;   // from 100 m birds fly back and forth across the pole
   let state, h, side, vis, camL, energy, haz, t, best, fall, overT, shake, why, pxv, newBest, hitFlash, hm, hammers, hoist, pops;
   const NEED = 10, HOIST_STEPS = 20, H_IN = 0.8, H_LIFT = 2.6, H_OUT = 0.7;   // 20 steps = 10 m
   const loadBest = () => { try { return +localStorage.getItem('poleClimbBest') || 0; } catch (e) { return 0; } };
@@ -1234,18 +1242,21 @@ const Game = (() => {
   const ARM = i => i > 0 && i % 8 === 4;
   const metres = n => (n * 0.5).toFixed(1);
 
-  function reset() { state = 'ready'; h = 0; side = -1; vis = 0; camL = 0; energy = 1; haz = {}; t = 0; fall = null; overT = 0; shake = 0; why = ''; pxv = -1; newBest = false; hitFlash = 0; best = loadBest(); hm = {}; hammers = 0; hoist = null; pops = []; }
+  function reset() { state = 'ready'; h = 0; side = -1; vis = 0; camL = 0; energy = 1; haz = {}; t = 0; fall = null; overT = 0; shake = 0; why = ''; pxv = -1; newBest = false; hitFlash = 0; best = loadBest(); hm = {}; hammers = 0; hoist = null; pops = []; flyMsg = 0; flyShown = false; lineMsg = 0; lineShown = false; jumpT = 0; }
+  const flyX = z => FLY_A * Math.sin(t * z.w + z.ph);
+  const flyHit = (z, d) => Math.abs(flyX(z) - d * (PW / 2 + 12)) < 24;
   function hammerAt(i) {
     if (i in hm) return hm[i];
     let z = null;
-    if (i >= 2 && !ARM(i) && Math.random() < 0.13) { const hz = hazAt(i); z = { side: hz ? -hz.side : (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 6, taken: false }; }
+    if (i >= 2 && !ARM(i) && !nearLine(i) && Math.random() < 0.13) { const hz = hazAt(i); z = { side: hz ? -hz.side : (Math.random() < 0.5 ? -1 : 1), ph: Math.random() * 6, taken: false }; }
     return (hm[i] = z);
   }
   function startHoist() { state = 'hoist'; hoist = { t: 0, from: h, to: h + HOIST_STEPS }; try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (e) {} }
   function hazAt(i) {
     if (i in haz) return haz[i];
     let z = null;
-    if (i >= 3 && !ARM(i) && Math.random() < Math.min(0.6, 0.3 + i * 0.004)) z = { side: Math.random() < 0.5 ? -1 : 1, kind: Math.random() < 0.55 ? 'bird' : 'nest', ph: Math.random() * 6 };
+    if (i >= 3 && !ARM(i) && !nearLine(i) && Math.random() < Math.min(0.6, 0.3 + i * 0.004)) z = { side: Math.random() < 0.5 ? -1 : 1, kind: Math.random() < 0.55 ? 'bird' : 'nest', ph: Math.random() * 6 };
+    if (z && z.kind === 'bird' && i >= FLY_FROM && Math.random() < 0.8) { z.fly = true; z.w = 1.7 + Math.min(1.3, (i - FLY_FROM) * 0.008) + Math.random() * 0.5; }
     return (haz[i] = z);
   }
   function crash(r) {
@@ -1259,7 +1270,8 @@ const Game = (() => {
     if (state === 'ready') state = 'play';
     if (state !== 'play') return;
     side = d; h++; energy = Math.min(1, energy + 0.09);
-    const z = hazAt(h); if (z && z.side === d) { crash('hit'); return; }
+    if (lineAt(h)) { crash('zap'); return; }
+    const z = hazAt(h); if (z && (z.fly ? flyHit(z, d) : z.side === d)) { crash('hit'); return; }
     const hmr = hammerAt(h);
     if (hmr && !hmr.taken && hmr.side === d) {
       hmr.taken = true; hammers++; pops.push({ t: 0, txt: hammers >= NEED ? 'HOIST!' : '+1 🔨' });
@@ -1267,9 +1279,21 @@ const Game = (() => {
       if (hammers >= NEED) startHoist();
     }
   }
+  function jump() {
+    if (state === 'over') return; if (state !== 'play') return;
+    if (!lineAt(h + 1)) return;
+    h += 2; jumpT = 0.4; energy = Math.min(1, energy + 0.09); pops.push({ t: 0, txt: 'Jump! ⚡' });
+    try { navigator.vibrate && navigator.vibrate(20); } catch (e) {}
+  }
   function update(dt) {
     t += dt;
     vis += (h - vis) * Math.min(1, dt * 16); camL += (h - camL) * Math.min(1, dt * 6); pxv += ((state === 'hoist' ? 0 : side) - pxv) * Math.min(1, dt * (state === 'hoist' ? 8 : 24));
+    jumpT = Math.max(0, jumpT - dt);
+    if (h >= LINE_FROM - 4 && !lineShown && state !== 'over') { lineShown = true; lineMsg = 4; }
+    lineMsg = Math.max(0, lineMsg - dt);
+    if (jumpBtn) { const ahead = state === 'play' && (lineAt(h + 1) || lineAt(h + 2) || lineAt(h + 3)); jumpBtn.className = 'gjump' + (ahead ? (lineAt(h + 1) ? ' on' : ' dim') : ''); }
+    if (h >= FLY_FROM && !flyShown && state !== 'over') { flyShown = true; flyMsg = 3.5; try { navigator.vibrate && navigator.vibrate([20, 30, 20]); } catch (e) {} }
+    flyMsg = Math.max(0, flyMsg - dt);
     pops.forEach(o => o.t += dt); pops = pops.filter(o => o.t < 1);
     clouds.forEach(c => { c.x += c.v * dt; if (c.x > W + 90) c.x = -90; });
     if (state === 'play') { energy -= (0.18 + Math.min(h, 80) * 0.003) * dt; if (energy <= 0) { energy = 0; crash('tired'); } }
@@ -1277,7 +1301,7 @@ const Game = (() => {
       hoist.t += dt; energy = Math.min(1, energy + dt * 0.5);
       const lt = Math.max(0, Math.min(1, (hoist.t - H_IN) / H_LIFT)), e = lt * lt * (3 - 2 * lt);
       h = hoist.from + Math.floor(HOIST_STEPS * e + 1e-6);
-      if (hoist.t >= H_IN + H_LIFT + H_OUT) { h = hoist.to; haz[h] = null; hm[h] = null; side = Math.random() < 0.5 ? -1 : 1; energy = 1; hammers = 0; hoist = null; state = 'play'; }
+      if (hoist.t >= H_IN + H_LIFT + H_OUT) { h = hoist.to; haz[h] = null; hm[h] = null; side = Math.random() < 0.5 ? -1 : 1; energy = 1; hammers = 0; hoist = null; state = 'play'; while (nearLine(h)) h++; }
     }
     else if (state === 'over') { overT += dt; if (fall) { fall.vy += 1900 * dt; fall.y += fall.vy * dt; fall.x += fall.vx * dt; fall.rot += 5 * dt; } }
     shake = Math.max(0, shake - dt); hitFlash = Math.max(0, hitFlash - dt * 2.5);
@@ -1390,15 +1414,28 @@ const Game = (() => {
         cx.fillStyle = '#7b8aa3'; for (const dx of [-52, -30, 30, 52]) { cx.beginPath(); cx.ellipse(x0 + dx, y - 11, 4, 5.5, 0, 0, 7); cx.fill(); }
       }
     }
+    // power lines (jump over these)
+    for (let i = Math.max(1, iMin); i <= iMax; i++) {
+      if (!lineAt(i)) continue; const y = sy(i);
+      cx.lineCap = 'round';
+      for (const dy of [-5, 5]) {
+        cx.strokeStyle = '#0d0d12'; cx.lineWidth = 3.4; cx.beginPath(); cx.moveTo(-10, y + dy - 6); cx.quadraticCurveTo(W / 2, y + dy + 12, W + 10, y + dy - 6); cx.stroke();
+        cx.strokeStyle = `rgba(110,200,255,${0.45 + 0.4 * Math.sin(t * 30 + i + dy)})`; cx.lineWidth = 1.4; cx.beginPath(); cx.moveTo(-10, y + dy - 6); cx.quadraticCurveTo(W / 2, y + dy + 12, W + 10, y + dy - 6); cx.stroke();
+      }
+      cx.strokeStyle = `rgba(255,236,120,${0.5 + 0.5 * Math.sin(t * 24 + i * 3)})`; cx.lineWidth = 2; cx.beginPath();
+      let ax = x0 - 70; cx.moveTo(ax, y); for (let k = 0; k < 8; k++) { ax += 17; cx.lineTo(ax, y + (k % 2 ? -9 : 9) * (0.5 + 0.5 * Math.sin(t * 40 + k + i))); } cx.stroke();
+      cx.fillStyle = '#ffd84a'; cx.beginPath(); cx.moveTo(x0 + 80, y - 30); cx.lineTo(x0 + 98, y); cx.lineTo(x0 + 62, y); cx.closePath(); cx.fill(); cx.fillStyle = '#1b1b1b'; cx.font = `800 13px ${FONT}`; cx.textAlign = 'center'; cx.fillText('⚡', x0 + 80, y - 5);
+    }
     // hazards
     for (let i = Math.max(1, iMin); i <= iMax; i++) {
       const z = hazAt(i); if (!z) continue; const y = sy(i), x = x0 + z.side * (PW / 2 + 16);
-      if (z.kind === 'bird') drawBird(x, y, z.side, z.ph); else drawNest(x, y, z.side, z.ph);
+      if (z.fly) { const fx = x0 + flyX(z), dirv = Math.cos(t * z.w + z.ph) >= 0 ? 1 : -1; cx.globalAlpha = 0.18; cx.strokeStyle = '#2f3440'; cx.lineWidth = 2; cx.setLineDash([4, 6]); cx.beginPath(); cx.moveTo(x0 - FLY_A, y); cx.lineTo(x0 + FLY_A, y); cx.stroke(); cx.setLineDash([]); cx.globalAlpha = 1; drawBird(fx, y, -dirv, z.ph); }
+      else if (z.kind === 'bird') drawBird(x, y, z.side, z.ph); else drawNest(x, y, z.side, z.ph);
     }
     // hammers
     for (let i = Math.max(1, iMin); i <= iMax; i++) { const m = hammerAt(i); if (m && !m.taken) drawHammer(x0 + m.side * (PW / 2 + 17), sy(i), m.ph); }
     // climber (and the hoist basket)
-    const mx = x0 + pxv * (PW / 2 + 12), my = sy(vis);
+    const mx = x0 + pxv * (PW / 2 + 12), my = sy(vis) - Math.sin(Math.PI * (jumpT / 0.4)) * 34;
     drawMan(mx, my, -Math.sign(pxv || side || -1), vis);
     if (hoist) {
       const ease = q => q * q * (3 - 2 * q), a = Math.min(1, hoist.t / H_IN), o = Math.max(0, (hoist.t - H_IN - H_LIFT) / H_OUT);
@@ -1416,6 +1453,8 @@ const Game = (() => {
     cx.fillStyle = 'rgba(0,0,0,.35)'; rr(bx, by, bw, 10, 5); cx.fill();
     cx.fillStyle = energy > 0.5 ? '#3ddc84' : energy > 0.25 ? '#ffb300' : '#ff4d4d'; if (energy > 0.01) { rr(bx, by, Math.max(10, bw * energy), 10, 5); cx.fill(); }
     for (let i = 0; i < NEED; i++) { const px = W / 2 + (i - (NEED - 1) / 2) * 15, py = by + 24; cx.beginPath(); cx.arc(px, py, 4.5, 0, 7); if (i < hammers) { cx.fillStyle = '#ffd84a'; cx.shadowColor = '#ffd84a'; cx.shadowBlur = 8; cx.fill(); cx.shadowBlur = 0; } else { cx.fillStyle = 'rgba(255,255,255,.22)'; cx.fill(); } }
+    if (lineMsg > 0) { cx.globalAlpha = Math.min(1, lineMsg); text('200 m! Power lines ahead: tap JUMP', W / 2, by + 108, 15, 800, '#6ec8ff'); cx.globalAlpha = 1; }
+    if (flyMsg > 0) { cx.globalAlpha = Math.min(1, flyMsg); text('100 m! Birds now fly across the pole', W / 2, by + 86, 15, 800, '#ff9f43'); cx.globalAlpha = 1; }
     if (state === 'hoist') { cx.globalAlpha = 0.7 + 0.3 * Math.sin(t * 10); text('HOIST ASSIST!  +10 m', W / 2, by + 62, 18, 800, '#ffd84a'); cx.globalAlpha = 1; }
     cx.textAlign = 'right'; text(`Best ${metres(best * 2)} m`, W - 14, safeTop + 26, 13, 600, 'rgba(255,255,255,.85)');
     cx.textAlign = 'center';
@@ -1433,7 +1472,7 @@ const Game = (() => {
       cx.fillStyle = 'rgba(0,0,0,.35)'; cx.fillRect(0, 0, W, H);
       const m = h * 0.5, rank = m < 5 ? 'Trainee' : m < 15 ? 'Apprentice linesman' : m < 30 ? 'Linesman' : m < 60 ? 'Senior linesman' : 'Pole legend';
       const cw = Math.min(W - 40, 330), cy = H * 0.22; card(cw, 270, cy);
-      text(why === 'tired' ? 'Out of energy!' : 'Ouch!', W / 2, cy + 46, 28, 800, '#ff6b5e');
+      text(why === 'tired' ? 'Out of energy!' : why === 'zap' ? 'Zapped!' : 'Ouch!', W / 2, cy + 46, 28, 800, '#ff6b5e');
       text(`${metres(h)} m`, W / 2, cy + 100, 48, 800, '#fff');
       text(rank, W / 2, cy + 132, 17, 700, '#ffd400');
       text(newBest ? '🏆 New best!' : `Best ${metres(best * 2)} m`, W / 2, cy + 164, 15, 600, 'rgba(255,255,255,.85)');
@@ -1447,16 +1486,16 @@ const Game = (() => {
     if (!isOpen) return;
     const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
     update(dt); draw();
-    root.dataset.state = state; root.dataset.h = h; root.dataset.energy = energy.toFixed(2); const nz = hazAt(h + 1); root.dataset.next = nz ? nz.side : 0; root.dataset.best = best; root.dataset.hammers = hammers; const nh = hammerAt(h + 1); root.dataset.nexth = nh && !nh.taken ? nh.side : 0;
+    root.dataset.state = state; root.dataset.h = h; root.dataset.energy = energy.toFixed(2); const nz = hazAt(h + 1); root.dataset.next = nz ? nz.side : 0; root.dataset.fly = nz && nz.fly ? (Math.abs(flyX(nz) - (PW / 2 + 12)) >= 24 ? 1 : (Math.abs(flyX(nz) + (PW / 2 + 12)) >= 24 ? -1 : 0)) : 0; root.dataset.flying = nz && nz.fly ? 1 : 0; root.dataset.best = best; root.dataset.hammers = hammers; root.dataset.line = lineAt(h + 1) ? 1 : 0; const nh = hammerAt(h + 1); root.dataset.nexth = nh && !nh.taken ? nh.side : 0;
     raf = requestAnimationFrame(frame);
   }
   function resize() { dpr = Math.min(2, window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
   const onDown = e => { e.preventDefault(); climb(e.clientX < window.innerWidth / 2 ? -1 : 1); };
-  const onKey = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft' || e.key === 'a') climb(-1); else if (e.key === 'ArrowRight' || e.key === 'd') climb(1); };
+  const onKey = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') { e.preventDefault(); jump(); } else if (e.key === 'ArrowLeft' || e.key === 'a') climb(-1); else if (e.key === 'ArrowRight' || e.key === 'd') climb(1); };
   function open() {
     if (isOpen) return; isOpen = true;
     root = document.createElement('div'); root.id = 'game'; root.className = 'gamewrap';
-    root.innerHTML = '<canvas></canvas><button class="gclose" aria-label="Close game">✕</button>';
+    root.innerHTML = '<canvas></canvas><button class="gclose" aria-label="Close game">✕</button><button class="gjump" aria-label="Jump over the power line">⚡ JUMP</button>';
     document.body.appendChild(root); document.body.style.overflow = 'hidden';
     cv = root.querySelector('canvas'); cx = cv.getContext('2d');
     const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;top:0;visibility:hidden;padding-top:env(safe-area-inset-top)'; document.body.appendChild(probe);
@@ -1465,6 +1504,7 @@ const Game = (() => {
     clouds = [...Array(6)].map(() => ({ x: Math.random() * W, y: Math.random(), s: 0.7 + Math.random() * 0.8, v: 6 + Math.random() * 10, par: 0.08 + Math.random() * 0.12 }));
     stars = [...Array(55)].map(() => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 1.5, p: Math.random() * 6 }));
     cv.addEventListener('pointerdown', onDown); root.querySelector('.gclose').addEventListener('click', close);
+    jumpBtn = root.querySelector('.gjump'); jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); jump(); });
     window.addEventListener('keydown', onKey); window.addEventListener('resize', resize);
     last = performance.now(); raf = requestAnimationFrame(frame);
   }
