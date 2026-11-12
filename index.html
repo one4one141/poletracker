@@ -7,18 +7,20 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pole Tracker">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#1a59ad">
+<meta name="theme-color" content="#f3f7fa">
 <title>Pole Test Tracker</title>
 <style>
 :root{
-  --bg:#ffffff; --card:#f2f2f7; --card2:#e5e5ea; --text:#111; --sub:#6b6b73; --line:#d8d8de;
-  --brand:#1a59ad; --brand2:#2e8cd1; --green:#229e47; --orange:#db800d; --red:#d13333; --purple:#8a2be2; --grey:#8e8e93;
-  --tab:#f9f9fb; color-scheme:light;
+  --bg:#f3f7fa; --card:#ffffff; --card2:#e6eef3; --text:#0e2236; --sub:#5a6e80; --line:#dce5ec; --head:#0b2a4a;
+  --brand:#07806c; --brand2:#0d9a82; --green:#1fa55a; --orange:#d97a0a; --red:#d13a3a; --purple:#7a4fd6; --grey:#8393a2;
+  --grad:linear-gradient(135deg,#0b3b66 0%,#08706f 62%,#0a9a85 100%);
+  --shadow:0 1px 2px rgba(11,42,74,.06),0 8px 24px rgba(11,42,74,.07);
+  --tab:#ffffff; color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){--bg:#000;--card:#1c1c1e;--card2:#2c2c2e;--text:#f2f2f7;--sub:#9a9aa1;--line:#38383a;--tab:#111113;--brand:#4a90e2;--brand2:#3b9be0;color-scheme:dark}
+  :root:not([data-theme="light"]){--bg:#07131f;--card:#0e2236;--card2:#153048;--text:#e8f1f7;--sub:#8fa6b8;--line:#1d3a54;--head:#eaf3f8;--tab:#0a1b2c;--brand:#2fd4a7;--brand2:#0e8f80;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);color-scheme:dark}
 }
-:root[data-theme="dark"]{--bg:#000;--card:#1c1c1e;--card2:#2c2c2e;--text:#f2f2f7;--sub:#9a9aa1;--line:#38383a;--tab:#111113;--brand:#4a90e2;--brand2:#3b9be0;color-scheme:dark}
+:root[data-theme="dark"]{--bg:#07131f;--card:#0e2236;--card2:#153048;--text:#e8f1f7;--sub:#8fa6b8;--line:#1d3a54;--head:#eaf3f8;--tab:#0a1b2c;--brand:#2fd4a7;--brand2:#0e8f80;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -113,7 +115,7 @@ textarea{min-height:110px;resize:vertical}
 .rp .tile2{background:#f2f2f2;border-radius:8px;padding:8px 10px;min-height:46px}
 .rp .tile2 small{display:block;font-size:8px;font-weight:600;color:#666;text-transform:uppercase}
 .rp .tile2 b{font-size:16px}
-.rp .dayh{background:#1a59ad;color:#fff!important;border-radius:4px;padding:5px 8px;display:flex;justify-content:space-between;font-weight:700;font-size:12px;margin-top:12px}
+.rp .dayh{background:#0b2a4a;color:#fff!important;border-radius:4px;padding:5px 8px;display:flex;justify-content:space-between;font-weight:700;font-size:12px;margin-top:12px}
 .rp .dayh *{color:#fff!important}
 .rp .pill{background:#fff;border-radius:9px;padding:0 8px}
 .rp table{width:100%;border-collapse:collapse;margin:6px 0} .rp th{text-align:left;font-size:11px;padding:3px 5px} .rp td{padding:3px 5px;font-size:11px}
@@ -144,7 +146,7 @@ svg text{fill:var(--sub);font-size:10px}
 .egg{display:inline-block;padding:8px 18px;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-touch-callout:none}
 .gate{position:fixed;inset:0;z-index:100;background:rgba(18,20,26,.6);-webkit-backdrop-filter:grayscale(1) blur(7px);backdrop-filter:grayscale(1) blur(7px);display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom));overflow:auto}
 .gate-card{background:var(--bg);color:var(--text);border-radius:24px;padding:26px 20px 16px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-.gate-ic{width:76px;height:76px;border-radius:19px;margin:0 auto 16px;background:linear-gradient(135deg,#1a59ad,#2e8cd1);display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(26,89,173,.4)}
+.gate-ic{width:76px;height:76px;border-radius:19px;margin:0 auto 16px;background:var(--grad);display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(8,112,111,.4)}
 .gate-card h2{font-size:22px;margin:0 0 8px;letter-spacing:-.3px}
 .gate-card p{margin:0 0 10px;color:var(--sub);font-size:15px}
 .gate-warn{background:color-mix(in srgb,var(--orange) 15%,var(--card));border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:14px 0 16px;color:var(--text)}
@@ -169,6 +171,32 @@ svg text{fill:var(--sub);font-size:10px}
 ol.steps{margin:0;padding-left:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:12px}
 ol.steps li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;background:var(--card);border-radius:12px;padding:12px}
 ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
+
+/* ---- facelift: deep navy + vivid teal-green ---- */
+html,body{background:var(--bg);-webkit-font-smoothing:antialiased}
+h1{font-size:32px;font-weight:800;letter-spacing:-.8px;color:var(--head);margin:6px 0 18px}
+h1:after{content:"";display:block;width:36px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--brand),var(--brand2));margin-top:9px}
+h2{font-size:18px;font-weight:700;color:var(--head);letter-spacing:-.2px}
+.card,.link,.day,.sect,.cell,.tile,label.field{border:1px solid var(--line);box-shadow:var(--shadow)}
+.cell.blank{border:0;box-shadow:none}
+.cell.worked,.cell.ot,.cell.off,.tile.sel{border-color:transparent}
+.card{border-radius:18px;padding:15px}
+.link{border-radius:18px} .link .ic{border-radius:13px;background:color-mix(in srgb,var(--brand) 13%,transparent)}
+.day{border-radius:16px} .daywrap{border-radius:16px}
+.sect{border-radius:18px} .tile{border-radius:16px} .cell{border-radius:12px}
+.hero{border-radius:22px;border:0;padding:20px;background:radial-gradient(120% 150% at 100% 0%,rgba(52,224,176,.5),transparent 55%),var(--grad);box-shadow:0 12px 28px rgba(8,60,90,.28)}
+.hero .big{background:rgba(255,255,255,.16);width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:30px}
+.btn{border-radius:12px} .btn.primary{background:var(--grad);box-shadow:0 4px 12px rgba(8,112,111,.28)}
+.tile.sel{background:var(--grad);box-shadow:0 6px 16px rgba(8,112,111,.3)}
+.cell.worked{background:var(--brand2)}
+.chip{background:color-mix(in srgb,var(--brand) 12%,transparent)}
+.tabbar{border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(11,42,74,.06)}
+.tab.on .pill{background:color-mix(in srgb,var(--brand) 16%,transparent)}
+input[type=text],input[type=number],input[type=time],input[type=password],select,textarea{border-radius:12px;background:var(--bg)}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}
+.toast{background:#0b2a4a;color:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3)} .toast button{color:#5ee8c0}
+.sheet-head{background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.metric .v{color:var(--head)}
 </style>
 </head>
 <body>
@@ -180,7 +208,7 @@ ol.steps li:before{content:counter(s);flex:none;width:26px;height:26px;border-ra
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-11.2';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-12.1';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -349,7 +377,7 @@ function lineChart(points, h = 150) {
   const x = i => L + (points.length === 1 ? (W - L - R) / 2 : i * ((W - L - R) / (points.length - 1)));
   let s = `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Weekly trend">`;
   s += `<line x1="0" x2="${W}" y1="${y(target())}" y2="${y(target())}" stroke="#8e8e93" stroke-dasharray="4 3"/>`;
-  s += `<polyline fill="none" stroke="#2e8cd1" stroke-width="2" points="${points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}"/>`;
+  s += `<polyline fill="none" stroke="#0d9a82" stroke-width="2" points="${points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}"/>`;
   points.forEach((p, i) => {
     s += `<circle cx="${x(i)}" cy="${y(p.value)}" r="4" fill="${perfHex(p.value)}"/>`;
     s += `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" style="font-size:9px">${esc(fmt(p.date, { day: 'numeric', month: 'short' }))}</text>`;
@@ -1066,7 +1094,7 @@ function pdfWeek(date, withComments) {
     const agg = {}; r.activities.forEach(a => { const g = agg[a.typeName] ||= { q: 0, b: 0, m: 0 }; g.q += a.quantity; g.b += actBudget(a); g.m = actMin(a); });
     const names = Object.keys(agg).sort();
     doc.ensure(24 + 18 + 15 * Math.min(names.length + 1, 6) + 20);
-    doc.y += 6; doc.rect(doc.M, doc.y, doc.W - 2 * doc.M, 20, '#1a59ad');
+    doc.y += 6; doc.rect(doc.M, doc.y, doc.W - 2 * doc.M, 20, '#0b2a4a');
     if (r.isDayOff) doc.text(`${name} — Day Off`, doc.M + 8, doc.y + 14, 11, { bold: true, color: '#ffffff' });
     else {
       doc.text(`${name} — ${polesOf(r)} poles${r.isOvertime ? '  ·  Overtime' : ''}`, doc.M + 8, doc.y + 14, 11, { bold: true, color: '#ffffff' });
@@ -1671,10 +1699,10 @@ function outText() { const tm = tHours(); return `${Math.floor(tm / 60)}h ${tm %
 (function boot() {
   try {
     const c = document.createElement('canvas'); c.width = c.height = 180; const x = c.getContext('2d');
-    const g = x.createLinearGradient(0, 0, 180, 180); g.addColorStop(0, '#1a59ad'); g.addColorStop(1, '#2e8cd1'); x.fillStyle = g; x.fillRect(0, 0, 180, 180);
+    const g = x.createLinearGradient(0, 0, 180, 180); g.addColorStop(0, '#0b3b66'); g.addColorStop(0.6, '#08706f'); g.addColorStop(1, '#0a9a85'); x.fillStyle = g; x.fillRect(0, 0, 180, 180);
     x.fillStyle = '#fff'; x.fillRect(80, 28, 20, 124); x.fillRect(46, 52, 88, 12); x.fillRect(58, 82, 64, 10);
     const l = document.createElement('link'); l.rel = 'apple-touch-icon'; l.href = c.toDataURL('image/png'); document.head.appendChild(l);
-    const m = { name: 'Pole Test Tracker', short_name: 'Pole Tracker', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#ffffff', theme_color: '#1a59ad', icons: [{ src: c.toDataURL('image/png'), sizes: '180x180', type: 'image/png' }] };
+    const m = { name: 'Pole Test Tracker', short_name: 'Pole Tracker', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#f3f7fa', theme_color: '#0b2a4a', icons: [{ src: c.toDataURL('image/png'), sizes: '180x180', type: 'image/png' }] };
     const ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' })); document.head.appendChild(ml);
   } catch (e) {}
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
