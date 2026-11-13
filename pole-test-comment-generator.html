@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Pole Test Comment Generator</title>
+  <style>
+  :root {
+    --bg: #eef2f6;
+    --card: #ffffff;
+    --navy: #0a1628;
+    --navy-mid: #12233d;
+    --teal: #00c2a8;
+    --teal-dark: #00a892;
+    --teal-soft: #e0faf6;
+    --primary: #00c2a8;
+    --primary-hover: #00a892;
+    --success: #00c2a8;
+    --danger: #dc2626;
+    --text: #0a1628;
+    --muted: #5a6b7d;
+    --border: #d5dde8;
+    --radius: 14px;
+    --shadow: 0 1px 3px rgba(10,22,40,0.08), 0 4px 12px rgba(10,22,40,0.05);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    padding-top: var(--safe-top);
+  }
+
+  /* Top bar card (header + banner) */
+  .top-bar {
+    margin: 12px;
+    margin-bottom: 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: calc(8px + var(--safe-top));
+    z-index: 30;
+  }
+  .header {
+    background: var(--navy);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header span { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .header .close, .header .help {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.12);
+    color: white;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Banner */
+  .banner {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: white;
+    text-align: center;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  /* Form card */
+  .form-container {
+    flex: 1;
+    margin: 10px 12px 4px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px 14px 20px;
+    box-shadow: var(--shadow);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin: 16px 0 10px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  .inline-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .inline-field .field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  select, input[type="text"], input[type="number"], input[type="date"], textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-size: 16px; /* prevents iOS zoom */
+    background: #f8fafc;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+    min-height: 48px;
+  }
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    padding-right: 36px;
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,194,168,0.25);
+    background: white;
+  }
+  textarea {
+    min-height: 96px;
+    resize: vertical;
+    line-height: 1.45;
+  }
+
+  .tests-section { margin-bottom: 4px; }
+
+  .test-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .test-row:last-child { border-bottom: none; }
+
+  .test-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 0 0 auto;
+    min-width: 90px;
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .radio-option { display: flex; align-items: center; }
+  .radio-option input[type="radio"] { display: none; }
+  .radio-option span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    min-height: 40px;
+    border-radius: 22px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #f1f5f9;
+    color: var(--muted);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .radio-option:active span { transform: scale(0.96); }
+
+  /* Colour-coded states */
+  .radio-option input[value="Pass"]:checked + span {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #16a34a;
+    font-weight: 600;
+  }
+  .radio-option input[value="Fail"]:checked + span {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #dc2626;
+    font-weight: 600;
+  }
+  .radio-option input[value="Not done"]:checked + span {
+    background: #e2e8f0;
+    color: #475569;
+    border-color: #94a3b8;
+    font-weight: 600;
+  }
+  /* Generic checked for other radios (drill, dig type) */
+  .radio-option input[type="radio"]:checked + span {
+    background: var(--teal-soft);
+    color: var(--teal-dark);
+    border-color: var(--teal);
+    font-weight: 600;
+  }
+  /* Pass/Fail/Not done overrides above for specificity - need higher specificity */
+  .radio-option input[value="Pass"]:checked + span {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border-color: #16a34a !important;
+  }
+  .radio-option input[value="Fail"]:checked + span {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    border-color: #dc2626 !important;
+  }
+  .radio-option input[value="Not done"]:checked + span {
+    background: #e2e8f0 !important;
+    color: #475569 !important;
+    border-color: #94a3b8 !important;
+  }
+
+  #extraFields {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .extra-block { margin-bottom: 14px; }
+  .extra-block label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .char-count {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 4px;
+  }
+  .radio-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .radio-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .radio-row input[type="radio"],
+  .radio-row input[type="checkbox"] {
+    width: 20px; height: 20px;
+    accent-color: var(--primary);
+  }
+  .height-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .height-row input { width: 110px; flex: none; }
+  .height-row span { font-size: 14px; color: var(--muted); }
+
+  .hidden { display: none !important; }
+
+  /* Output panel */
+  .output-panel {
+    display: none;
+    margin: 0 12px 4px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--teal);
+  }
+  .output-panel.visible { display: block; }
+  .output-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--success);
+    margin-bottom: 8px;
+  }
+  .output-text {
+    background: var(--teal-soft);
+    border: 1px solid #7ee8d8;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    color: var(--navy);
+    font-weight: 500;
+    min-height: 52px;
+    word-break: break-word;
+  }
+  .copy-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 14px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .copy-btn:active { opacity: 0.9; transform: scale(0.98); }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    gap: 10px;
+    margin: 12px;
+    margin-top: 10px;
+    padding: 12px;
+    padding-bottom: calc(12px + var(--safe-bottom));
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    position: sticky;
+    bottom: calc(8px + var(--safe-bottom));
+    z-index: 20;
+    border: 1px solid var(--border);
+  }
+  .btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 50px;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:first-child {
+    background: #eef2f6;
+    color: var(--muted);
+  }
+  .btn:first-child:active {
+    background: #e2e8f0;
+  }
+  .btn:last-child {
+    background: var(--primary);
+    color: white;
+  }
+  .btn:last-child:active {
+    background: var(--primary-hover);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(80px + var(--safe-bottom));
+    transform: translateX(-50%) translateY(20px);
+    background: var(--navy);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="top-bar">
+<div class="header">
+      <button class="close" onclick="resetForm()" title="Close / Reset">✕</button>
+      <span>Pole Test Comment Generator</span>
+      <button class="help" title="Help">?</button>
+    </div>
+
+    <div class="banner">
+      Complete this form to generate your pole test comments.
+    </div>
+    </div>
+
+    <div class="form-container" id="formContainer">
+      <!-- Test Type -->
+      <div class="inline-field">
+        <label class="field-label">Test Type:</label>
+        <select id="testType" onchange="onTestTypeChange()">
+          <option value="">— Select —</option>
+          <option value="Stage 1">Stage 1</option>
+          <option value="Stage 1A (Soft)">Stage 1A (Soft)</option>
+          <option value="Stage 1A (Hard)">Stage 1A (Hard)</option>
+          <option value="Stage 2">Stage 2</option>
+          <option value="Stage 3">Stage 3</option>
+          <option value="Incomplete">Incomplete</option>
+          <option value="Pole Recovered">Pole Recovered</option>
+        </select>
+      </div>
+
+      <!-- Tests Done section (dynamic) -->
+      <div id="testsSection" class="tests-section hidden">
+        <div class="section-title">Tests Done</div>
+
+        <div class="test-row" id="rowVisual">
+          <span class="test-name">Visual</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="visual" value="Pass"><span>Pass</span></label>
+            <label class="radio-option"><input type="radio" name="visual" value="Fail"><span>Fail</span></label>
+            <label class="radio-option"><input type="radio" name="visual" value="Not done"><span>Not done</span></label>
+          </div>
+        </div>
+
+        <div class="test-row" id="rowHammer">
+          <span class="test-name">Hammer</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="hammer" value="Pass"><span>Pass</span></label>
+            <label class="radio-option"><input type="radio" name="hammer" value="Fail"><span>Fail</span></label>
+            <label class="radio-option"><input type="radio" name="hammer" value="Not done"><span>Not done</span></label>
+          </div>
+        </div>
+
+        <div class="test-row" id="rowResistograph">
+          <span class="test-name">Resistograph</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="resistograph" value="Pass"><span>Pass</span></label>
+            <label class="radio-option"><input type="radio" name="resistograph" value="Fail"><span>Fail</span></label>
+            <label class="radio-option"><input type="radio" name="resistograph" value="Not done"><span>Not done</span></label>
+          </div>
+        </div>
+
+        <div class="test-row" id="rowDrillPattern">
+          <span class="test-name">Drill Pattern</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="drillPattern" value="0-52"><span>0-52</span></label>
+            <label class="radio-option"><input type="radio" name="drillPattern" value=">52"><span>&gt;52</span></label>
+            <label class="radio-option"><input type="radio" name="drillPattern" value="RA"><span>RA</span></label>
+            <label class="radio-option"><input type="radio" name="drillPattern" value="TNC"><span>TNC</span></label>
+          </div>
+        </div>
+
+        <div class="test-row" id="rowDig">
+          <span class="test-name">Dig</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="dig" value="Pass"><span>Pass</span></label>
+            <label class="radio-option"><input type="radio" name="dig" value="Fail"><span>Fail</span></label>
+            <label class="radio-option"><input type="radio" name="dig" value="Not done"><span>Not done</span></label>
+          </div>
+        </div>
+
+        <div class="test-row" id="rowDigType">
+          <span class="test-name">Dig Type</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="digType" value="Full"><span>Full</span></label>
+            <label class="radio-option"><input type="radio" name="digType" value="2/3"><span>2/3</span></label>
+            <label class="radio-option"><input type="radio" name="digType" value="TNC"><span>TNC</span></label>
+          </div>
+        </div>
+
+        <div class="test-row" id="rowClimb">
+          <span class="test-name">Climb</span>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="climb" value="Pass"><span>Pass</span></label>
+            <label class="radio-option"><input type="radio" name="climb" value="Fail"><span>Fail</span></label>
+            <label class="radio-option"><input type="radio" name="climb" value="Not done"><span>Not done</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Result (for most stages) -->
+      <div class="inline-field hidden" id="testResultGroup">
+        <label class="field-label">Test Result:</label>
+        <select id="testResult">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+
+      <!-- Reason (for Incomplete + Pole Recovered) -->
+      <div class="inline-field hidden" id="reasonGroup">
+        <label class="field-label">Reason:</label>
+        <select id="reason">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+
+      <!-- Dynamic extra fields based on Test Result -->
+      <div id="extraFields" class="hidden"></div>
+    </div>
+
+    <div class="output-panel" id="outputPanel">
+      <div class="output-title">Generated Comment</div>
+      <div class="output-text" id="outputText"></div>
+      <div class="char-count" id="outputCharCount" style="margin-top:8px;">Character Count (max 245): 0</div>
+      <button class="copy-btn" onclick="copyComment()">Copy to Clipboard</button>
+    </div>
+
+    <div class="footer">
+      <button class="btn" onclick="resetForm()">Reset</button>
+      <button class="btn" onclick="generateComment()">Submit</button>
+    </div>
+  </div>
+
+  <script>
+    // Field visibility rules based on the latest screenshots
+    // Test Result options
+    // Stage 1 changes based on Visual selection
+    const stage1ResultsByVisual = {
+      'Pass': [
+        'OK',
+        'Hollow Pole Corroded',
+        'Recovery Pole Defective',
+        'Hazard',
+        'D for Depth',
+        'Damage Move',
+        'Pole is Damaged',
+        'PIDOC (CAT 1)',
+        'PIDOC (CAT 2)',
+        'Danger of Collapse (CAT 3)',
+        'Pole Unstable'
+      ],
+      'Fail': [
+        'Hollow Pole Corroded',
+        'Recovery Pole Defective',
+        'D for Depth',
+        'Damage Move',
+        'Pole is Damaged',
+        'PIDOC (CAT 1)',
+        'PIDOC (CAT 2)',
+        'Danger of Collapse (CAT 3)',
+        'Pole Unstable'
+      ],
+      'Not done': [
+        'Hollow Pole Corroded',
+        'Recovery Pole Defective',
+        'D for Depth',
+        'Damage Move',
+        'Pole is Damaged',
+        'PIDOC (CAT 1)',
+        'PIDOC (CAT 2)',
+        'Danger of Collapse (CAT 3)',
+        'Pole Unstable'
+      ]
+    };
+
+    // Shared list for Stage 1A Soft/Hard, Stage 2, Stage 3
+    const defaultTestResults = [
+      'Pole Decayed',
+      'Tested Not Climbed',
+      'Shallow Depth',
+      'Recovery Pole Defective',
+      'D for Depth',
+      'Unable to Repair Pole',
+      'Damage Move',
+      'PIDOC (CAT 1)',
+      'PIDOC (CAT 2)',
+      'Danger of Collapse (CAT 3)',
+      'Pole Dam Repair Poss',
+      'Pole Unstable'
+    ];
+
+    // Reason options
+    const reasonOptions = {
+      'Incomplete': [
+        'No Access - A108 Left',
+        'No Access - A108 Not Left',
+        'Tree Cutting Required',
+        'Traffic Lights Required',
+        'Tree and Traffic Required',
+        'Safety Issue',
+        'Low Wires',
+        'Other'
+      ],
+      'Pole Recovered': [
+        'Pole no longer exists',
+        'Pole is being renumbered'
+      ]
+    };
+
+    const fieldConfig = {
+      'Stage 1': {
+        tests: ['visual'],
+        showTestResult: true,
+        showReason: false,
+        showDrillPattern: false,
+        showDigType: false
+      },
+      'Stage 1A (Soft)': {
+        tests: ['visual', 'hammer', 'resistograph', 'dig'],
+        showTestResult: true,
+        showReason: false,
+        showDrillPattern: false,
+        showDigType: false
+      },
+      'Stage 1A (Hard)': {
+        tests: ['visual', 'hammer', 'resistograph'],
+        showTestResult: true,
+        showReason: false,
+        showDrillPattern: false,
+        showDigType: false
+      },
+      'Stage 2': {
+        tests: ['visual', 'hammer', 'resistograph', 'climb'],
+        showTestResult: true,
+        showReason: false,
+        showDrillPattern: false,
+        showDigType: false
+      },
+      'Stage 3': {
+        tests: ['visual', 'hammer', 'resistograph', 'dig', 'climb'],
+        showTestResult: true,
+        showReason: false,
+        // Kept from earlier screenshots – confirm if still needed
+        showDrillPattern: true,
+        showDigType: true
+      },
+      'Incomplete': {
+        tests: ['visual', 'hammer', 'resistograph', 'dig', 'climb'],
+        showTestResult: false,
+        showReason: true,
+        showDrillPattern: false,
+        showDigType: false
+      },
+      'Pole Recovered': {
+        tests: [],
+        showTestResult: false,
+        showReason: true,
+        showDrillPattern: false,
+        showDigType: false
+      }
+    };
+
+    const allTestRows = {
+      visual: 'rowVisual',
+      hammer: 'rowHammer',
+      resistograph: 'rowResistograph',
+      dig: 'rowDig',
+      climb: 'rowClimb',
+      drillPattern: 'rowDrillPattern',
+      digType: 'rowDigType'
+    };
+
+    function populateSelect(selectId, options) {
+      const sel = document.getElementById(selectId);
+      sel.innerHTML = '<option value="">— Select —</option>';
+      options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        sel.appendChild(o);
+      });
+    }
+
+    // ---------- Extra fields based on Test Result ----------
+    function clearExtraFields() {
+      const container = document.getElementById('extraFields');
+      container.innerHTML = '';
+      container.classList.add('hidden');
+    }
+
+    function makeTextarea(id, label, maxChars) {
+      const block = document.createElement('div');
+      block.className = 'extra-block';
+      block.innerHTML = `
+        <label for="${id}">${label}</label>
+        <textarea id="${id}" maxlength="${maxChars || 250}"></textarea>
+        <div class="char-count"><span id="${id}_count">${maxChars || 250}</span> char(s) remaining</div>
+      `;
+      const ta = block.querySelector('textarea');
+      const counter = block.querySelector(`#${id}_count`);
+      ta.addEventListener('input', () => {
+        const remaining = (maxChars || 250) - ta.value.length;
+        counter.textContent = remaining;
+      });
+      return block;
+    }
+
+    function renderExtraFields(testResult) {
+      const container = document.getElementById('extraFields');
+      container.innerHTML = '';
+      if (!testResult) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      let hasContent = false;
+
+      if (testResult === 'Hollow Pole Corroded' || testResult === 'Pole is Damaged' || testResult === 'Pole Dam Repair Poss') {
+        container.appendChild(makeTextarea('extra_details', 'Details:', 250));
+        hasContent = true;
+      }
+      else if (testResult === 'Recovery Pole Defective') {
+        container.appendChild(makeTextarea('extra_why_defective', 'Why is the pole defective?', 250));
+        container.appendChild(makeTextarea('extra_why_recovered', 'Why does the pole need recovered?', 250));
+        hasContent = true;
+      }
+      else if (testResult === 'D for Depth') {
+        const block = document.createElement('div');
+        block.className = 'extra-block';
+        block.innerHTML = `
+          <label>Is the 3m mark visible?</label>
+          <div class="radio-row">
+            <label><input type="radio" name="markVisible" value="Yes"> Yes</label>
+            <label><input type="radio" name="markVisible" value="No"> No</label>
+          </div>
+          <div class="height-row hidden" id="markHeightRow">
+            <label style="margin:0; font-weight:500;">3m mark height</label>
+            <input type="number" id="extra_mark_height" placeholder="">
+            <span>cm</span>
+          </div>
+        `;
+        container.appendChild(block);
+        block.querySelectorAll('input[name="markVisible"]').forEach(r => {
+          r.addEventListener('change', () => {
+            const row = document.getElementById('markHeightRow');
+            if (r.value === 'Yes' && r.checked) row.classList.remove('hidden');
+            else if (r.value === 'No' && r.checked) row.classList.add('hidden');
+          });
+        });
+        hasContent = true;
+      }
+      else if (testResult === 'Shallow Depth') {
+        const block = document.createElement('div');
+        block.className = 'extra-block';
+        block.innerHTML = `
+          <label>3m mark height</label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" id="extra_mark_height" placeholder="" style="flex:1;">
+            <span>cm</span>
+          </div>
+        `;
+        container.appendChild(block);
+        hasContent = true;
+      }
+      else if (testResult === 'Tested Not Climbed') {
+        const block = document.createElement('div');
+        block.className = 'extra-block';
+        block.innerHTML = `
+          <label>Reason:</label>
+          <select id="extra_tnc_reason">
+            <option value="">— Select —</option>
+            <option value="Only Sample Test Possible">Only Sample Test Possible</option>
+            <option value="Pole Top Congestion">Pole Top Congestion</option>
+            <option value="Power Conflict">Power Conflict</option>
+            <option value="Other">Other</option>
+          </select>
+        `;
+        container.appendChild(block);
+
+        const tncExtras = document.createElement('div');
+        tncExtras.id = 'tncExtras';
+        container.appendChild(tncExtras);
+
+        block.querySelector('select').addEventListener('change', function() {
+          const area = document.getElementById('tncExtras');
+          area.innerHTML = '';
+          const r = this.value;
+          if (!r) return;
+          // All reasons get Details
+          area.appendChild(makeTextarea('extra_details', 'Details:', 250));
+          // Power Conflict also gets A1024 Ref
+          if (r === 'Power Conflict') {
+            const a1024 = document.createElement('div');
+            a1024.className = 'extra-block';
+            a1024.innerHTML = `
+              <label for="extra_a1024">A1024 Ref:</label>
+              <input type="text" id="extra_a1024">
+            `;
+            area.appendChild(a1024);
+          }
+        });
+        hasContent = true;
+      }
+      else if (testResult === 'Unable to Repair Pole') {
+        const reasonBlock = document.createElement('div');
+        reasonBlock.className = 'extra-block';
+        reasonBlock.innerHTML = `
+          <label>Reason:</label>
+          <select id="extra_unable_reason">
+            <option value="">— Select —</option>
+            <option value="Damage exceeds allowed measurements">Damage exceeds allowed measurements</option>
+            <option value="Woodpecker damage">Woodpecker damage</option>
+            <option value="Other">Other</option>
+          </select>
+        `;
+        container.appendChild(reasonBlock);
+
+        const unableExtras = document.createElement('div');
+        unableExtras.id = 'unableExtras';
+        container.appendChild(unableExtras);
+
+        const saturnBlock = document.createElement('div');
+        saturnBlock.className = 'extra-block';
+        saturnBlock.innerHTML = `
+          <label>Saturn Result:</label>
+          <select id="extra_saturn">
+            <option value="">— Select —</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="RT">RT</option>
+          </select>
+        `;
+        container.appendChild(saturnBlock);
+
+        reasonBlock.querySelector('select').addEventListener('change', function() {
+          const area = document.getElementById('unableExtras');
+          area.innerHTML = '';
+          const r = this.value;
+          if (r === 'Damage exceeds allowed measurements') {
+            area.innerHTML = `
+              <div class="extra-block">
+                <label>Pole Circumference:</label>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <input type="number" id="extra_circumference" placeholder="Enter in mm" style="flex:1;">
+                  <span style="font-size:13px;color:#64748b;">mm</span>
+                </div>
+              </div>
+              <div class="extra-block">
+                <label>Enter damage widths below (mm)</label>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="flex:1;font-size:13px;">Sector C (5mm - 10mm)</span>
+                    <input type="number" id="extra_sector_c" placeholder="Enter in mm" style="width:120px;">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="flex:1;font-size:13px;">Sector B (11mm - 15mm)</span>
+                    <input type="number" id="extra_sector_b" placeholder="Enter in mm" style="width:120px;">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="flex:1;font-size:13px;">Sector A (16mm - 30mm)</span>
+                    <input type="number" id="extra_sector_a" placeholder="Enter in mm" style="width:120px;">
+                  </div>
+                </div>
+              </div>
+            `;
+          } else if (r === 'Woodpecker damage' || r === 'Other') {
+            area.appendChild(makeTextarea('extra_details', 'Details:', 250));
+          }
+        });
+        hasContent = true;
+      }
+      else if (testResult === 'Damage Move') {
+        const digBlock = document.createElement('div');
+        digBlock.className = 'extra-block';
+        digBlock.innerHTML = `
+          <label>Is a full or TNC dig and resi test possible?</label>
+          <select id="extra_dmo_possible">
+            <option value="">— Select —</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        `;
+        container.appendChild(digBlock);
+
+        const dmoExtras = document.createElement('div');
+        dmoExtras.id = 'dmoExtras';
+        container.appendChild(dmoExtras);
+
+        digBlock.querySelector('select').addEventListener('change', function() {
+          const area = document.getElementById('dmoExtras');
+          area.innerHTML = '';
+          if (this.value === 'Yes') {
+            area.innerHTML = `
+              <div class="extra-block" style="color:#dc2626;font-weight:700;font-size:15px;text-align:center;padding:12px 0;">
+                Do not proceed. This is not DMO.
+              </div>
+            `;
+          } else if (this.value === 'No') {
+            area.appendChild(makeTextarea('extra_obstruction', 'Provide details about the obstruction(s):', 250));
+            area.appendChild(makeTextarea('extra_other_comments', 'Any other comments?', 250));
+          }
+        });
+        hasContent = true;
+      }
+      else if (testResult === 'PIDOC (CAT 1)' || testResult === 'PIDOC (CAT 2)' || testResult === 'Danger of Collapse (CAT 3)') {
+        container.appendChild(makeTextarea('extra_why_pidoc', 'Why is the pole a PIDOC?', 250));
+        hasContent = true;
+      }
+      else if (testResult === 'Pole Unstable') {
+        // Details dropdown
+        const detailsBlock = document.createElement('div');
+        detailsBlock.className = 'extra-block';
+        detailsBlock.innerHTML = `
+          <label>Details:</label>
+          <select id="extra_unstable_details">
+            <option value="">— Select —</option>
+            <option value="Unstable Ground">Unstable Ground</option>
+            <option value="Pole leaning > 15 degrees">Pole leaning > 15 degrees</option>
+            <option value="Other">Other</option>
+          </select>
+        `;
+        container.appendChild(detailsBlock);
+
+        // Reason (free text?) – shown as another details in screenshot
+        container.appendChild(makeTextarea('extra_unstable_reason', 'Reason:', 250));
+        hasContent = true;
+      }
+      else if (testResult === 'Hazard') {
+        // Reason dropdown
+        const reasonBlock = document.createElement('div');
+        reasonBlock.className = 'extra-block';
+        reasonBlock.innerHTML = `
+          <label>Reason:</label>
+          <select id="extra_hazard_reason">
+            <option value="">— Select —</option>
+            <option value="Spiked metal railings">Spiked metal railings</option>
+            <option value="Glass topped walls">Glass topped walls</option>
+            <option value="Razor wire">Razor wire</option>
+            <option value="Chestnut paling fencing">Chestnut paling fencing</option>
+            <option value="Proximity to power">Proximity to power</option>
+            <option value="Plant close to power">Plant close to power</option>
+            <option value="Other">Other</option>
+          </select>
+        `;
+        container.appendChild(reasonBlock);
+        container.appendChild(makeTextarea('extra_details', 'Details:', 250));
+        hasContent = true;
+      }
+      else if (testResult === 'Pole Decayed') {
+        // Pole Class
+        const classBlock = document.createElement('div');
+        classBlock.className = 'extra-block';
+        classBlock.innerHTML = `
+          <label>Pole Class:</label>
+          <select id="extra_pole_class">
+            <option value="">— Select —</option>
+            <option value="Light or Extra Light">Light or Extra Light</option>
+            <option value="Medium">Medium</option>
+            <option value="Stout">Stout</option>
+          </select>
+        `;
+        container.appendChild(classBlock);
+
+        // Decay Type – always show all 4 options
+        const decayBlock = document.createElement('div');
+        decayBlock.className = 'extra-block';
+        decayBlock.innerHTML = `
+          <label>Decay Type:</label>
+          <select id="extra_decay_type">
+            <option value="">— Select —</option>
+            <option value="Internal">Internal</option>
+            <option value="External">External</option>
+            <option value="Internal & External">Internal &amp; External</option>
+            <option value="Tip Rot">Tip Rot</option>
+            <option value="Cross Arms">Cross Arms</option>
+          </select>
+        `;
+        container.appendChild(decayBlock);
+
+        // Dynamic area for decay-type-specific fields (inserted before Saturn)
+        const decayExtras = document.createElement('div');
+        decayExtras.id = 'decayExtras';
+        container.appendChild(decayExtras);
+
+        // Saturn Result
+        const saturnBlock = document.createElement('div');
+        saturnBlock.className = 'extra-block';
+        saturnBlock.innerHTML = `
+          <label>Saturn Result:</label>
+          <select id="extra_saturn">
+            <option value="">— Select —</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="RT">RT</option>
+          </select>
+        `;
+        container.appendChild(saturnBlock);
+
+        function updateDecayExtras() {
+          const area = document.getElementById('decayExtras');
+          if (!area) return;
+          area.innerHTML = '';
+          const dt = document.getElementById('extra_decay_type')?.value || '';
+          if (dt === 'External' || dt === 'Internal & External') {
+            area.innerHTML = `
+              <div class="extra-block">
+                <label>Enter decay widths below (mm)</label>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="flex:1;font-size:13px;">Depth (&gt;6mm - 15mm)</span>
+                    <input type="number" id="extra_depth_6_15" placeholder="Enter in mm" style="width:120px;">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="flex:1;font-size:13px;">Depth (&gt;15mm - 30mm)</span>
+                    <input type="number" id="extra_depth_15_30" placeholder="Enter in mm" style="width:120px;">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="flex:1;font-size:13px;">Depth (&gt;30mm)</span>
+                    <input type="number" id="extra_depth_30" placeholder="Enter in mm" style="width:120px;">
+                  </div>
+                </div>
+              </div>
+              <div class="extra-block">
+                <label>Location:</label>
+                <div class="radio-row" style="gap:14px;">
+                  <label><input type="checkbox" id="extra_loc_bgl" value="BGL"> BGL</label>
+                  <label><input type="checkbox" id="extra_loc_atgl" value="ATGL"> ATGL</label>
+                  <label><input type="checkbox" id="extra_loc_abgl" value="ABGL"> ABGL</label>
+                </div>
+              </div>
+            `;
+          } else if (dt === 'Internal') {
+            area.innerHTML = `
+              <div class="extra-block">
+                <label>Location:</label>
+                <div class="radio-row" style="gap:14px;">
+                  <label><input type="checkbox" id="extra_loc_bgl" value="BGL"> BGL</label>
+                  <label><input type="checkbox" id="extra_loc_atgl" value="ATGL"> ATGL</label>
+                  <label><input type="checkbox" id="extra_loc_abgl" value="ABGL"> ABGL</label>
+                </div>
+              </div>
+            `;
+          }
+          // Tip Rot / Cross Arms: no extra fields
+        }
+
+        document.getElementById('extra_decay_type').addEventListener('change', updateDecayExtras);
+
+        hasContent = true;
+      }
+      // OK currently has no extra fields shown in screenshots
+
+      if (hasContent) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    // Listen for Test Result changes
+    document.getElementById('testResult').addEventListener('change', function() {
+      renderExtraFields(this.value);
+    });
+
+    // ---------- Incomplete Reason extra fields ----------
+    function renderIncompleteReasonFields(reason) {
+      const container = document.getElementById('extraFields');
+      container.innerHTML = '';
+      if (!reason) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      let hasContent = false;
+
+      if (reason === 'No Access - A108 Left' || reason === 'No Access - A108 Not Left') {
+        const datesBlock = document.createElement('div');
+        datesBlock.className = 'extra-block';
+        datesBlock.innerHTML = `
+          <label style="margin-bottom:10px;">Please enter visit dates</label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:60px;font-size:14px;font-weight:500;">Visit 1:</span>
+              <input type="date" id="extra_visit1" style="flex:1;">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:60px;font-size:14px;font-weight:500;">Visit 2:</span>
+              <input type="date" id="extra_visit2" style="flex:1;">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:60px;font-size:14px;font-weight:500;">Visit 3:</span>
+              <input type="date" id="extra_visit3" style="flex:1;">
+            </div>
+          </div>
+        `;
+        container.appendChild(datesBlock);
+
+        const idBlock = document.createElement('div');
+        idBlock.className = 'extra-block';
+        idBlock.innerHTML = `
+          <label for="extra_no_access_id">No access submission ID:</label>
+          <input type="text" id="extra_no_access_id" placeholder="Enter ID">
+        `;
+        container.appendChild(idBlock);
+        container.appendChild(makeTextarea('extra_details', 'Details:', 250));
+        hasContent = true;
+      }
+      else if (reason === 'Tree Cutting Required' || reason === 'Tree and Traffic Required') {
+        const a55 = document.createElement('div');
+        a55.className = 'extra-block';
+        a55.innerHTML = `
+          <label for="extra_a55">A55 Ref(s):</label>
+          <input type="text" id="extra_a55">
+        `;
+        container.appendChild(a55);
+        const ptw = document.createElement('div');
+        ptw.className = 'extra-block';
+        ptw.innerHTML = `
+          <label for="extra_ptw">PTW Ref:</label>
+          <input type="text" id="extra_ptw">
+          <div style="font-size:12px;color:#64748b;margin-top:4px;">Leave PTW ref blank for council owned land.</div>
+        `;
+        container.appendChild(ptw);
+        hasContent = true;
+      }
+      else if (reason === 'Traffic Lights Required') {
+        const a55 = document.createElement('div');
+        a55.className = 'extra-block';
+        a55.innerHTML = `
+          <label for="extra_a55">A55 Ref(s):</label>
+          <input type="text" id="extra_a55">
+        `;
+        container.appendChild(a55);
+        hasContent = true;
+      }
+      else if (reason === 'Safety Issue' || reason === 'Other') {
+        container.appendChild(makeTextarea('extra_details', 'Details:', 250));
+        hasContent = true;
+      }
+      else if (reason === 'Low Wires') {
+        const a1024 = document.createElement('div');
+        a1024.className = 'extra-block';
+        a1024.innerHTML = `
+          <label for="extra_a1024">A1024 Ref:</label>
+          <input type="text" id="extra_a1024">
+        `;
+        container.appendChild(a1024);
+
+        const drop = document.createElement('div');
+        drop.className = 'extra-block';
+        drop.innerHTML = `
+          <label for="extra_low_dropwires">No. Low Dropwires:</label>
+          <select id="extra_low_dropwires">
+            <option value="">— Select —</option>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5+">5+</option>
+          </select>
+        `;
+        container.appendChild(drop);
+
+        const aerial = document.createElement('div');
+        aerial.className = 'extra-block';
+        aerial.innerHTML = `
+          <label for="extra_low_aerial">No. Low Aerial Cables:</label>
+          <select id="extra_low_aerial">
+            <option value="">— Select —</option>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5+">5+</option>
+          </select>
+        `;
+        container.appendChild(aerial);
+        hasContent = true;
+      }
+
+      if (hasContent) container.classList.remove('hidden');
+      else container.classList.add('hidden');
+    }
+
+    // Listen for Reason changes (Incomplete / Pole Recovered)
+    document.getElementById('reason').addEventListener('change', function() {
+      const testType = document.getElementById('testType').value;
+      if (testType === 'Incomplete') {
+        renderIncompleteReasonFields(this.value);
+      } else {
+        clearExtraFields();
+      }
+    });
+
+    function onTestTypeChange() {
+      const testType = document.getElementById('testType').value;
+      const testsSection = document.getElementById('testsSection');
+      const testResultGroup = document.getElementById('testResultGroup');
+      const reasonGroup = document.getElementById('reasonGroup');
+
+      // Hide everything first
+      Object.values(allTestRows).forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      testsSection.classList.add('hidden');
+      testResultGroup.classList.add('hidden');
+      reasonGroup.classList.add('hidden');
+      clearExtraFields();
+
+      if (!testType || !fieldConfig[testType]) return;
+
+      const cfg = fieldConfig[testType];
+
+      // Show relevant test rows
+      if (cfg.tests.length > 0) {
+        testsSection.classList.remove('hidden');
+        cfg.tests.forEach(t => {
+          if (allTestRows[t]) {
+            document.getElementById(allTestRows[t]).classList.remove('hidden');
+          }
+        });
+      }
+
+      // Stage 3 extras
+      if (cfg.showDrillPattern) {
+        document.getElementById('rowDrillPattern').classList.remove('hidden');
+      }
+      if (cfg.showDigType) {
+        document.getElementById('rowDigType').classList.remove('hidden');
+      }
+
+      // Test Result vs Reason + populate options
+      if (cfg.showTestResult) {
+        testResultGroup.classList.remove('hidden');
+        updateTestResultOptions(testType);
+      }
+      if (cfg.showReason) {
+        reasonGroup.classList.remove('hidden');
+        const opts = reasonOptions[testType] || [];
+        populateSelect('reason', opts);
+      }
+    }
+
+    function allTestsPassed(testType) {
+      const cfg = fieldConfig[testType];
+      if (!cfg || !cfg.tests || cfg.tests.length === 0) return false;
+
+      // Required tests for this stage
+      for (const t of cfg.tests) {
+        const val = getRadioValue(t);
+        if (val !== 'Pass') return false;
+      }
+      // Stage 3 also has drillPattern + digType – treat them as optional for "all pass"
+      // (only the main Pass/Fail/Not done tests count)
+      return true;
+    }
+
+    function updateTestResultOptions(testType) {
+      let opts;
+      if (testType === 'Stage 1') {
+        const visual = getRadioValue('visual');
+        opts = [...(stage1ResultsByVisual[visual] || stage1ResultsByVisual['Fail'])];
+      } else {
+        opts = [...defaultTestResults];
+      }
+
+      // If every relevant test is Pass, ensure "OK" is at the top of the list
+      if (allTestsPassed(testType)) {
+        if (!opts.includes('OK')) {
+          opts.unshift('OK');
+        }
+      } else {
+        // Remove OK if not all tests passed
+        opts = opts.filter(o => o !== 'OK');
+      }
+
+      // For Stage 1 Pass we already have OK + Hazard from the visual list;
+      // the above still works cleanly.
+
+      populateSelect('testResult', opts);
+      clearExtraFields();
+    }
+
+    function getRadioValue(name) {
+      const el = document.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : null;
+    }
+
+    // When any test radio changes, refresh Test Result options (so OK appears/disappears)
+    ['visual', 'hammer', 'resistograph', 'dig', 'climb'].forEach(name => {
+      document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+        radio.addEventListener('change', () => {
+          const testType = document.getElementById('testType').value;
+          if (testType && fieldConfig[testType] && fieldConfig[testType].showTestResult) {
+            updateTestResultOptions(testType);
+          }
+        });
+      });
+    });
+
+    function generateComment() {
+      const testType = document.getElementById('testType').value;
+      if (!testType) {
+        alert('Please select a Test Type.');
+        return;
+      }
+
+      const data = {
+        visual: getRadioValue('visual'),
+        hammer: getRadioValue('hammer'),
+        resistograph: getRadioValue('resistograph'),
+        dig: getRadioValue('dig'),
+        climb: getRadioValue('climb'),
+        drillPattern: getRadioValue('drillPattern'),
+        digType: getRadioValue('digType'),
+        testResult: document.getElementById('testResult').value,
+        reason: document.getElementById('reason').value
+      };
+
+      // Collect extra fields
+      const extras = {};
+      const extraDetails = document.getElementById('extra_details');
+      if (extraDetails) extras.details = extraDetails.value;
+      const whyDef = document.getElementById('extra_why_defective');
+      if (whyDef) extras.whyDefective = whyDef.value;
+      const whyRec = document.getElementById('extra_why_recovered');
+      if (whyRec) extras.whyRecovered = whyRec.value;
+      const whyPidoc = document.getElementById('extra_why_pidoc');
+      if (whyPidoc) extras.whyPidoc = whyPidoc.value;
+      const markVisible = getRadioValue('markVisible');
+      if (markVisible) extras.markVisible = markVisible;
+      const markHeight = document.getElementById('extra_mark_height');
+      if (markHeight && markVisible === 'Yes') extras.markHeight = markHeight.value;
+      const unstableDetails = document.getElementById('extra_unstable_details');
+      if (unstableDetails) extras.unstableDetails = unstableDetails.value;
+      const unstableReason = document.getElementById('extra_unstable_reason');
+      if (unstableReason) extras.unstableReason = unstableReason.value;
+      const hazardReason = document.getElementById('extra_hazard_reason');
+      if (hazardReason) extras.hazardReason = hazardReason.value;
+      // Incomplete extras
+      ['extra_visit1','extra_visit2','extra_visit3'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el && el.value) extras['visit'+(i+1)] = el.value;
+      });
+      const noAccessId = document.getElementById('extra_no_access_id');
+      if (noAccessId && noAccessId.value) extras.noAccessId = noAccessId.value;
+      const a55 = document.getElementById('extra_a55');
+      if (a55 && a55.value) extras.a55 = a55.value;
+      const ptw = document.getElementById('extra_ptw');
+      if (ptw && ptw.value) extras.ptw = ptw.value;
+      const a1024 = document.getElementById('extra_a1024');
+      if (a1024 && a1024.value) extras.a1024 = a1024.value;
+      const lowDrop = document.getElementById('extra_low_dropwires');
+      if (lowDrop && lowDrop.value) extras.lowDropwires = lowDrop.value;
+      const lowAerial = document.getElementById('extra_low_aerial');
+      if (lowAerial && lowAerial.value) extras.lowAerial = lowAerial.value;
+      // Pole Decayed extras
+      const poleClass = document.getElementById('extra_pole_class');
+      if (poleClass && poleClass.value) extras.poleClass = poleClass.value;
+      const decayType = document.getElementById('extra_decay_type');
+      if (decayType && decayType.value) extras.decayType = decayType.value;
+      const saturn = document.getElementById('extra_saturn');
+      if (saturn && saturn.value) extras.saturn = saturn.value;
+      const d615 = document.getElementById('extra_depth_6_15');
+      if (d615 && d615.value) extras.depth615 = d615.value;
+      const d1530 = document.getElementById('extra_depth_15_30');
+      if (d1530 && d1530.value) extras.depth1530 = d1530.value;
+      const d30 = document.getElementById('extra_depth_30');
+      if (d30 && d30.value) extras.depth30 = d30.value;
+      const locs = [];
+      if (document.getElementById('extra_loc_bgl')?.checked) locs.push('BGL');
+      if (document.getElementById('extra_loc_atgl')?.checked) locs.push('ATGL');
+      if (document.getElementById('extra_loc_abgl')?.checked) locs.push('ABGL');
+      if (locs.length) extras.location = locs.join(', ');
+      // New Stage 3 extras
+      const tncReason = document.getElementById('extra_tnc_reason');
+      if (tncReason && tncReason.value) extras.tncReason = tncReason.value;
+      const unableReason = document.getElementById('extra_unable_reason');
+      if (unableReason && unableReason.value) extras.unableReason = unableReason.value;
+      const circ = document.getElementById('extra_circumference');
+      if (circ && circ.value) extras.circumference = circ.value;
+      const secC = document.getElementById('extra_sector_c');
+      if (secC && secC.value) extras.sectorC = secC.value;
+      const secB = document.getElementById('extra_sector_b');
+      if (secB && secB.value) extras.sectorB = secB.value;
+      const secA = document.getElementById('extra_sector_a');
+      if (secA && secA.value) extras.sectorA = secA.value;
+      const dmoPossible = document.getElementById('extra_dmo_possible');
+      if (dmoPossible && dmoPossible.value) extras.dmoPossible = dmoPossible.value;
+      const obstruction = document.getElementById('extra_obstruction');
+      if (obstruction && obstruction.value) extras.obstruction = obstruction.value;
+      const otherComments = document.getElementById('extra_other_comments');
+      if (otherComments && otherComments.value) extras.otherComments = otherComments.value;
+
+      data.extras = extras;
+
+      const comment = buildComment(testType, data);
+      document.getElementById('outputText').textContent = comment;
+      document.getElementById('outputCharCount').textContent = 'Character Count (max 245): ' + comment.length;
+      document.getElementById('outputPanel').classList.add('visible');
+      document.getElementById('outputPanel').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function buildComment(testType, data) {
+      const extras = data.extras || {};
+      const parts = [];
+
+      // ---- Stage / Type prefix ----
+      if (testType === 'Stage 1') parts.push('STAGE 1.');
+      else if (testType === 'Stage 1A (Soft)') parts.push('STAGE 1A (SOFT).');
+      else if (testType === 'Stage 1A (Hard)') parts.push('STAGE 1A (HARD).');
+      else if (testType === 'Stage 2') parts.push('STAGE 2.');
+      else if (testType === 'Stage 3') parts.push('STAGE 3.');
+      else if (testType === 'Incomplete') parts.push('INCOMPLETE.');
+      else if (testType === 'Pole Recovered') parts.push('POLE RECOVERED.');
+
+      // ---- Main result phrase ----
+      const result = data.testResult || '';
+      const reason = data.reason || '';
+
+      if (testType === 'Pole Recovered') {
+        if (reason === 'Pole no longer exists') parts.push('POLE NO LONGER EXISTS.');
+        else if (reason === 'Pole is being renumbered') parts.push('POLE IS BEING RENUMBERED.');
+        else if (reason) parts.push(reason.toUpperCase() + '.');
+        return parts.join(' ').trim();
+      }
+
+      if (testType === 'Incomplete') {
+        if (reason) parts.push(reason.toUpperCase() + '.');
+        // Extra fields
+        if (extras.visit1) parts.push('VISIT 1: ' + extras.visit1 + '.');
+        if (extras.visit2) parts.push('VISIT 2: ' + extras.visit2 + '.');
+        if (extras.visit3) parts.push('VISIT 3: ' + extras.visit3 + '.');
+        if (extras.noAccessId) parts.push('NO ACCESS ID: ' + extras.noAccessId.toUpperCase() + '.');
+        if (extras.a55) parts.push('A55 REF: ' + extras.a55.toUpperCase() + '.');
+        if (extras.ptw) parts.push('PTW REF: ' + extras.ptw.toUpperCase() + '.');
+        if (extras.a1024) parts.push('A1024 REF: ' + extras.a1024.toUpperCase() + '.');
+        if (extras.lowDropwires) parts.push('LOW DROPWIRES: ' + extras.lowDropwires + '.');
+        if (extras.lowAerial) parts.push('LOW AERIAL CABLES: ' + extras.lowAerial + '.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+        // Append which tests were done
+        const testBits = [];
+        if (data.visual) testBits.push('VISUAL ' + data.visual.toUpperCase());
+        if (data.hammer) testBits.push('HAMMER ' + data.hammer.toUpperCase());
+        if (data.resistograph) testBits.push('RESISTOGRAPH ' + data.resistograph.toUpperCase());
+        if (data.dig) testBits.push('DIG ' + data.dig.toUpperCase());
+        if (data.climb) testBits.push('CLIMB ' + data.climb.toUpperCase());
+        if (testBits.length) parts.push(testBits.join('. ') + '.');
+        return parts.join(' ').trim();
+      }
+
+      // Normal stages – result first
+      if (result === 'OK') {
+        parts.push('POLE TESTED OK.');
+      } else if (result === 'Hollow Pole Corroded') {
+        parts.push('HOLLOW POLE CORRODED.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+      } else if (result === 'Recovery Pole Defective') {
+        parts.push('RECOVERY POLE DEFECTIVE.');
+        if (extras.whyDefective) parts.push('DEFECTIVE: ' + extras.whyDefective.toUpperCase() + '.');
+        if (extras.whyRecovered) parts.push('NEEDS RECOVERED: ' + extras.whyRecovered.toUpperCase() + '.');
+      } else if (result === 'Hazard') {
+        parts.push('HAZARD.');
+        if (extras.hazardReason) parts.push(extras.hazardReason.toUpperCase() + '.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+      } else if (result === 'D for Depth') {
+        parts.push('D FOR DEPTH.');
+        if (extras.markVisible === 'Yes') {
+          parts.push('3M MARK VISIBLE.');
+          if (extras.markHeight) parts.push('3M MARK HEIGHT ' + extras.markHeight + ' CM.');
+        } else if (extras.markVisible === 'No') {
+          parts.push('3M MARK NOT VISIBLE.');
+        }
+      } else if (result === 'Pole is Damaged') {
+        parts.push('POLE IS DAMAGED.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+      } else if (result === 'PIDOC (CAT 1)') {
+        parts.push('PIDOC (CAT 1).');
+        if (extras.whyPidoc) parts.push(extras.whyPidoc.toUpperCase() + '.');
+      } else if (result === 'PIDOC (CAT 2)') {
+        parts.push('PIDOC (CAT 2).');
+        if (extras.whyPidoc) parts.push(extras.whyPidoc.toUpperCase() + '.');
+      } else if (result === 'Danger of Collapse (CAT 3)') {
+        parts.push('DANGER OF COLLAPSE (CAT 3).');
+        if (extras.whyPidoc) parts.push(extras.whyPidoc.toUpperCase() + '.');
+      } else if (result === 'Pole Unstable') {
+        parts.push('POLE UNSTABLE.');
+        if (extras.unstableDetails) parts.push(extras.unstableDetails.toUpperCase() + '.');
+        if (extras.unstableReason) parts.push(extras.unstableReason.toUpperCase() + '.');
+      } else if (result === 'Pole Decayed') {
+        parts.push('POLE DECAYED.');
+        if (extras.poleClass) parts.push('POLE CLASS: ' + extras.poleClass.toUpperCase() + '.');
+        if (extras.decayType) parts.push('DECAY TYPE: ' + extras.decayType.toUpperCase() + '.');
+        if (extras.depth615) parts.push('DEPTH >6-15MM: ' + extras.depth615 + 'MM.');
+        if (extras.depth1530) parts.push('DEPTH >15-30MM: ' + extras.depth1530 + 'MM.');
+        if (extras.depth30) parts.push('DEPTH >30MM: ' + extras.depth30 + 'MM.');
+        if (extras.location) parts.push('LOCATION: ' + extras.location + '.');
+        if (extras.saturn) parts.push('SATURN: ' + extras.saturn + '.');
+      } else if (result === 'Tested Not Climbed') {
+        parts.push('TESTED NOT CLIMBED.');
+        if (extras.tncReason) parts.push(extras.tncReason.toUpperCase() + '.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+        if (extras.a1024) parts.push('A1024 REF: ' + extras.a1024.toUpperCase() + '.');
+      } else if (result === 'Shallow Depth') {
+        parts.push('SHALLOW DEPTH.');
+        if (extras.markHeight) parts.push('3M MARK HEIGHT ' + extras.markHeight + ' CM.');
+      } else if (result === 'Unable to Repair Pole') {
+        parts.push('UNABLE TO REPAIR POLE.');
+        if (extras.unableReason) parts.push(extras.unableReason.toUpperCase() + '.');
+        if (extras.circumference) parts.push('CIRCUMFERENCE: ' + extras.circumference + ' MM.');
+        if (extras.sectorC) parts.push('SECTOR C: ' + extras.sectorC + ' MM.');
+        if (extras.sectorB) parts.push('SECTOR B: ' + extras.sectorB + ' MM.');
+        if (extras.sectorA) parts.push('SECTOR A: ' + extras.sectorA + ' MM.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+        if (extras.saturn) parts.push('SATURN: ' + extras.saturn + '.');
+      } else if (result === 'Pole Dam Repair Poss') {
+        parts.push('POLE DAM REPAIR POSS.');
+        if (extras.details) parts.push(extras.details.toUpperCase() + '.');
+      } else if (result === 'Damage Move') {
+        parts.push('DAMAGE MOVE.');
+        if (extras.dmoPossible) parts.push('FULL/TNC DIG POSSIBLE: ' + extras.dmoPossible.toUpperCase() + '.');
+        if (extras.obstruction) parts.push('OBSTRUCTION: ' + extras.obstruction.toUpperCase() + '.');
+        if (extras.otherComments) parts.push(extras.otherComments.toUpperCase() + '.');
+      } else if (result) {
+        parts.push(result.toUpperCase() + '.');
+      }
+
+      // ---- Tests Done summary (matching original style) ----
+      const testParts = [];
+      if (data.visual) testParts.push('VISUAL ' + data.visual.toUpperCase());
+      if (data.hammer) testParts.push('HAMMER ' + data.hammer.toUpperCase());
+      if (data.resistograph) testParts.push('RESISTOGRAPH ' + data.resistograph.toUpperCase());
+      if (data.drillPattern) testParts.push('DRILL PATTERN ' + data.drillPattern.toUpperCase());
+      if (data.dig) testParts.push('DIG ' + data.dig.toUpperCase());
+      if (data.digType) testParts.push('DIG TYPE ' + data.digType.toUpperCase());
+      if (data.climb) testParts.push('CLIMB ' + data.climb.toUpperCase());
+
+      if (testParts.length) {
+        parts.push(testParts.join('. ') + '.');
+      }
+
+      let comment = parts.join(' ').trim();
+      // Clean double spaces / periods
+      comment = comment.replace(/\s+/g, ' ').replace(/\.\s*\./g, '.').trim();
+      return comment;
+    }
+
+    function copyComment() {
+      const textEl = document.getElementById('outputText');
+      const text = textEl ? textEl.textContent : '';
+      const showToast = () => {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        toast.textContent = 'Copied to clipboard';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showToast).catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast();
+        });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast();
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('testType').value = '';
+      document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+      document.getElementById('testResult').value = '';
+      document.getElementById('reason').value = '';
+      document.getElementById('outputPanel').classList.remove('visible');
+      document.getElementById('outputText').textContent = '';
+      onTestTypeChange();
+    }
+
+    // Init
+    onTestTypeChange();
+  </script>
+  <div class="toast" id="toast">Copied to clipboard</div>
+</body>
+</html>
