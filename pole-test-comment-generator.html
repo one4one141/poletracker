@@ -1353,7 +1353,7 @@
       const markVisible = getRadioValue('markVisible');
       if (markVisible) extras.markVisible = markVisible;
       const markHeight = document.getElementById('extra_mark_height');
-      if (markHeight && markVisible === 'Yes') extras.markHeight = markHeight.value;
+      if (markHeight && markHeight.value) extras.markHeight = markHeight.value;
       const unstableDetails = document.getElementById('extra_unstable_details');
       if (unstableDetails) extras.unstableDetails = unstableDetails.value;
       const unstableReason = document.getElementById('extra_unstable_reason');
