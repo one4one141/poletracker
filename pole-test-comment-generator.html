@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Pole Test Comment Generator</title>
   <style>
-  :root {
-    --bg: #eef2f6;
+  :root, [data-theme="light"] {
+    --bg: #f0f4f8;
     --card: #ffffff;
     --navy: #0a1628;
     --navy-mid: #12233d;
@@ -20,10 +20,36 @@
     --text: #0a1628;
     --muted: #5a6b7d;
     --border: #d5dde8;
+    --pill-bg: #f1f5f9;
+    --footer-btn-bg: #eef2f6;
+    --input-bg: #f8fafc;
     --radius: 14px;
     --shadow: 0 1px 3px rgba(10,22,40,0.08), 0 4px 12px rgba(10,22,40,0.05);
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --chart-line: #94a3b8;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0b1220;
+    --card: #152033;
+    --navy: #060d18;
+    --navy-mid: #0f1a2b;
+    --teal: #00d4b8;
+    --teal-dark: #00c2a8;
+    --teal-soft: #0d3d38;
+    --primary: #00d4b8;
+    --primary-hover: #00c2a8;
+    --success: #00d4b8;
+    --danger: #f87171;
+    --text: #e8eef6;
+    --muted: #8b9cb3;
+    --border: #243247;
+    --pill-bg: #1a283c;
+    --footer-btn-bg: #1a283c;
+    --input-bg: #0f1a2b;
+    --shadow: 0 1px 3px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.25);
+    --chart-line: #3d4f66;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -137,7 +163,7 @@
     border: 1.5px solid var(--border);
     border-radius: 12px;
     font-size: 16px; /* prevents iOS zoom */
-    background: #f8fafc;
+    background: var(--input-bg);
     color: var(--text);
     transition: border-color 0.15s, box-shadow 0.15s;
     font-family: inherit;
@@ -201,7 +227,7 @@
     border-radius: 22px;
     font-size: 13px;
     font-weight: 500;
-    background: #f1f5f9;
+    background: var(--pill-bg);
     color: var(--muted);
     border: 1.5px solid transparent;
     cursor: pointer;
@@ -379,7 +405,7 @@
   }
   .btn:active { transform: scale(0.97); }
   .btn:first-child {
-    background: #eef2f6;
+    background: var(--footer-btn-bg);
     color: var(--muted);
   }
   .btn:first-child:active {
@@ -416,15 +442,131 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+
+  /* Settings */
+  .settings-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,22,40,0.45);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 12px;
+    padding-bottom: calc(12px + var(--safe-bottom));
+  }
+  .settings-overlay.hidden { display: none !important; }
+  .settings-panel {
+    width: 100%;
+    max-width: 480px;
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--navy);
+    color: white;
+  }
+  .settings-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .settings-close {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.12);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .settings-body {
+    padding: 16px 18px 24px;
+    overflow-y: auto;
+  }
+  .settings-group { margin-bottom: 22px; }
+  .settings-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .theme-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .theme-option {
+    display: flex;
+    cursor: pointer;
+  }
+  .theme-option input { display: none; }
+  .theme-option span {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--pill-bg);
+    color: var(--muted);
+    border: 1.5px solid transparent;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-option input:checked + span {
+    background: var(--teal-soft);
+    color: var(--teal-dark);
+    border-color: var(--teal);
+  }
+  .settings-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.4;
+  }
+  .settings-soon {
+    opacity: 0.7;
+  }
+  /* Header single button layout */
+  .header {
+    justify-content: space-between;
+  }
+  .header span {
+    flex: 1;
+    text-align: center;
+    padding: 0 8px;
+  }
+
 </style>
+<script>
+  (function(){
+    var p = localStorage.getItem('ptcg-theme') || 'system';
+    var t = (p === 'light' || p === 'dark') ? p :
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 </head>
 <body>
   <div class="app">
     <div class="top-bar">
 <div class="header">
-      <button class="close" onclick="resetForm()" title="Close / Reset">✕</button>
       <span>Pole Test Comment Generator</span>
-      <button class="help" title="Help">?</button>
+      <button class="help" type="button" title="Settings" onclick="openSettings()" aria-label="Settings">⚙</button>
     </div>
 
     <div class="banner">
@@ -1609,9 +1751,86 @@
       onTestTypeChange();
     }
 
+
+    // ---------- Theme / Settings ----------
+    function getThemePref() {
+      return localStorage.getItem('ptcg-theme') || 'system';
+    }
+
+    function resolveTheme(pref) {
+      if (pref === 'light' || pref === 'dark') return pref;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function applyTheme() {
+      const pref = getThemePref();
+      const resolved = resolveTheme(pref);
+      document.documentElement.setAttribute('data-theme', resolved);
+      // sync radio buttons if present
+      document.querySelectorAll('input[name="themePref"]').forEach(r => {
+        r.checked = r.value === pref;
+      });
+    }
+
+    function setThemePref(pref) {
+      localStorage.setItem('ptcg-theme', pref);
+      applyTheme();
+    }
+
+    function openSettings() {
+      applyTheme(); // sync radios
+      document.getElementById('settingsOverlay').classList.remove('hidden');
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsOverlay').classList.add('hidden');
+    }
+
+    // Apply on load + watch system changes
+    applyTheme();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (getThemePref() === 'system') applyTheme();
+    });
+
+
     // Init
     onTestTypeChange();
   </script>
+  
+  <!-- Settings overlay -->
+  <div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button type="button" class="settings-close" onclick="closeSettings()" aria-label="Close">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-group">
+          <div class="settings-label">Appearance</div>
+          <div class="theme-options">
+            <label class="theme-option">
+              <input type="radio" name="themePref" value="light" onchange="setThemePref('light')">
+              <span>Light</span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="themePref" value="dark" onchange="setThemePref('dark')">
+              <span>Dark</span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="themePref" value="system" onchange="setThemePref('system')">
+              <span>System</span>
+            </label>
+          </div>
+          <p class="settings-hint">System follows your device light/dark setting.</p>
+        </div>
+        <div class="settings-group settings-soon">
+          <div class="settings-label">More settings</div>
+          <p class="settings-hint">Coming soon</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast">Copied to clipboard</div>
 </body>
 </html>
