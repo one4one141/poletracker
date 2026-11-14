@@ -211,7 +211,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-14.1';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-14.2';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -279,6 +279,9 @@ const budgetH = d => d.activities.reduce((s, a) => s + actBudget(a), 0);
 const polesOf = d => d.activities.reduce((s, a) => s + actPoles(a), 0);
 const perfOf = d => (!d.isDayOff && netH(d) > 0) ? budgetH(d) / netH(d) : null;
 const hasData = d => !!d && (d.isDayOff || d.actualHours > 0 || d.activities.length > 0);
+/* a past day with nothing entered (after the first day you used the app) counts as a day off automatically; nothing is stored, so entering data later just works */
+const autoOff = d => { const k = dayKey(d), ks = Object.keys(S.days).filter(x => hasData(S.days[x])).sort(); return ks.length > 0 && k >= ks[0] && k < dayKey(today()) && !hasData(S.days[k]); };
+const autoOffInMonth = first => { let n = 0; for (let d = new Date(first.getFullYear(), first.getMonth(), 1); d.getMonth() === first.getMonth(); d.setDate(d.getDate() + 1)) if (autoOff(d)) n++; return n; };
 const rec = date => S.days[dayKey(date)] || null;
 const recDate = r => parseKey(r.key);
 
@@ -515,6 +518,7 @@ function dayRow(date) {
   let right;
   if (r && r.isDayOff) right = `<b class="sub">Day Off</b>`;
   else if (r && (r.actualHours > 0 || r.activities.length)) right = `<div><b>${polesOf(r)} poles</b> <b class="mono" style="color:${perfVar(perfOf(r))}">${pct(perfOf(r))}</b><div class="small sub">${hrs(netH(r))} net hrs</div></div>`;
+  else if (autoOff(date)) right = `<div><b class="sub">Day Off</b><div class="small sub">nothing entered</div></div>`;
   else right = `<span class="sub">Not entered</span>`;
   const has = hasData(r);
   const row = `<div class="day" data-act="edit" data-key="${k}" role="button"><div><b>${fmt(date, { weekday: 'long' })}</b><div class="sub small">${dm(date)}</div></div><div class="r">${right}</div><span class="sub">›</span></div>`;
@@ -535,7 +539,7 @@ function diaryView() {
   let cells = '';
   for (let i = 0; i < blanks; i++) cells += '<div class="cell blank"></div>';
   for (let d = 1; d <= count; d++) {
-    const date = new Date(y, mo, d), r = rec(date), k = kind(r);
+    const date = new Date(y, mo, d), r = rec(date), k = kind(r) || (autoOff(date) ? 'off' : '');
     const lab = k === 'off' ? 'Off' : (k === 'worked' || k === 'ot') ? (r.actualHours > 0 ? Number(r.actualHours.toFixed(2)) + 'h' : 'OT') : '&nbsp;';
     cells += `<button class="cell ${k} ${dayKey(date) === dayKey(today()) ? 'today' : ''}" data-act="diary-day" data-key="${dayKey(date)}"><b>${d}</b><i>${lab}</i>${r && r.comments ? '<span class="dot"></span>' : ''}</button>`;
   }
@@ -557,6 +561,7 @@ function diaryDaySheet() {
   const dd = V.diaryDay, date = parseKey(dd.key), r = S.days[dd.key];
   let info;
   if (r && r.isDayOff) info = '<div>🌙 Day off</div>';
+  else if (!r && autoOff(date)) info = '<div>🌙 Day off <span class="sub small">(nothing entered)</span></div>';
   else if (r && (r.actualHours > 0 || r.activities.length)) info = `
     <div class="list-row"><span>Hours worked</span><b>${hrs(r.actualHours, 2)}</b></div>
     <div class="list-row"><span>Net hours</span><b>${hrs(netH(r), 2)}</b></div>
@@ -704,7 +709,7 @@ function weekReportHTML(date, withComments) {
   if (pts.some(p => p.value != null)) h += `<div class="sec"><b>Daily performance</b>${barChart(pts, 130)}</div>`;
   let any = false;
   dates.forEach(d => {
-    const r = rec(d); if (!hasData(r)) return; any = true;
+    let r = rec(d); if (!hasData(r)) { if (!autoOff(d)) return; r = { isDayOff: true, activities: [], comments: null }; } any = true;
     const name = fmt(d, { weekday: 'long', day: 'numeric', month: 'short' });
     h += `<div class="sec">`;
     if (r.isDayOff) h += `<div class="dayh"><span>${name} — Day Off</span></div>`;
@@ -737,7 +742,7 @@ function monthData(first) {
   const net = worked.reduce((s, r) => s + netH(r), 0), budget = worked.reduce((s, r) => s + budgetH(r), 0);
   const withPerf = weeks.filter(w => w.perf != null), dayPerf = worked.filter(r => perfOf(r) != null);
   return {
-    month: first, title: fmt(first, { month: 'long', year: 'numeric' }), recs, worked, daysOff: recs.filter(r => r.isDayOff).length, weeks, acts,
+    month: first, title: fmt(first, { month: 'long', year: 'numeric' }), recs, worked, daysOff: recs.filter(r => r.isDayOff).length + autoOffInMonth(first), weeks, acts,
     ot: recs.filter(r => r.isOvertime && !r.isDayOff), notes: recs.filter(r => r.comments),
     poles: worked.reduce((s, r) => s + polesOf(r), 0), hours: worked.reduce((s, r) => s + r.actualHours, 0), net, budget, perf: net > 0 ? budget / net : null,
     bestWeek: withPerf.slice().sort((a, c) => c.perf - a.perf)[0], worstWeek: withPerf.slice().sort((a, c) => a.perf - c.perf)[0],
@@ -772,7 +777,7 @@ function weekIssues(date) {
   weekDates(date).forEach(d => {
     if (d > t) return;
     const r = rec(d);
-    if (!hasData(r)) { out.push({ d, m: 'Nothing entered' }); return; }
+    if (!hasData(r)) { if (!autoOff(d)) out.push({ d, m: 'Nothing entered' }); return; }
     if (r.isDayOff) return;
     if (r.actualHours > 0 && !r.activities.length) out.push({ d, m: 'Hours entered but no pole work' });
     else if (r.actualHours === 0 && r.activities.length) out.push({ d, m: 'Pole work entered but no working hours' });
@@ -1093,7 +1098,7 @@ function pdfWeek(date, withComments) {
   pdfBars(doc, 'Daily performance', dates.map(d => ({ label: weekdayShort(d), value: rec(d) ? perfOf(rec(d)) : null })), 120);
   let any = false;
   dates.forEach(d => {
-    const r = rec(d); if (!hasData(r)) return; any = true;
+    let r = rec(d); if (!hasData(r)) { if (!autoOff(d)) return; r = { isDayOff: true, activities: [], comments: null }; } any = true;
     const name = fmt(d, { weekday: 'long', day: 'numeric', month: 'short' });
     const agg = {}; r.activities.forEach(a => { const g = agg[a.typeName] ||= { q: 0, b: 0, m: 0 }; g.q += a.quantity; g.b += actBudget(a); g.m = actMin(a); });
     const names = Object.keys(agg).sort();
