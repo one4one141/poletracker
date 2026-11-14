@@ -197,9 +197,12 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 .toast{background:#0b2a4a;color:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3)} .toast button{color:#5ee8c0}
 .sheet-head{background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .metric .v{color:var(--head)}
-.devwrap{position:relative;margin:14px 0 10px}
-.sash{position:absolute;top:-9px;right:18px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(11,42,74,.35));transform:rotate(-2.5deg)}
-.sash span{display:block;background:linear-gradient(135deg,#ffc233,#ff9500);color:#3a2300;font:800 10px/1 -apple-system,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;padding:6px 16px;clip-path:polygon(0 0,100% 0,calc(100% - 7px) 50%,100% 100%,0 100%,7px 50%)}
+.devlink{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-top:8px;color:var(--text)}
+.devlink:first-child{margin-top:0}
+.devlink .dl-ic{width:38px;height:38px;border-radius:11px;background:color-mix(in srgb,var(--brand) 13%,transparent);color:var(--brand);display:grid;place-items:center;flex:none}
+.devlink .dl-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.devlink .dl-t{flex:1;display:flex;flex-direction:column}.devlink .dl-t b{font-size:16px}.devlink .dl-t span{font-size:13px;color:var(--sub)}
+.devlink .dl-ch{color:var(--sub);font-size:22px}
 </style>
 </head>
 <body>
@@ -211,7 +214,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-14.2';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-14.3';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -828,6 +831,8 @@ const SICON = {
   appear: '<circle cx="12" cy="12" r="3.8"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M6 18l1.4-1.4M16.6 7.4 18 6"/>',
   install: '<rect x="7" y="3.5" width="10" height="17" rx="2.5"/><path d="M12 9v5M9.5 11.5h5"/>',
   backup: '<path d="M4 7.5h16v3H4z"/><path d="M5.5 10.5V18a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-7.5M10 14h4"/>',
+  dev: '<path d="M14.5 6.5a3.5 3.5 0 0 0-4.6 4.6L4.5 16.5a1.8 1.8 0 0 0 2.5 2.5l5.4-5.4a3.5 3.5 0 0 0 4.6-4.6l-2.2 2.2-2-.5-.5-2z"/>',
+  proj: '<rect x="4" y="4.5" width="16" height="15" rx="2.5"/><path d="M4 9.5h16M9 9.5v10"/>',
   note: '<path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5h-7l-4.5 3.5V17H5A1.5 1.5 0 0 1 3.5 15.5V7A1.5 1.5 0 0 1 5 5.5z"/><path d="M8 10h8M8 13h5"/>',
   lock: '<rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><circle cx="12" cy="15.2" r=".9"/>',
   danger: '<path d="M5 7h14M9.5 7V5h5v2M7 7l.8 11.5a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L17 7"/>'
@@ -870,6 +875,9 @@ function settingsView() {
     <button class="btn block" data-act="backup-share">⬆︎ Share backup…</button>
     <button class="btn block" data-act="restore">⤴ Restore from backup</button>
   </div><div class="acc-note">Backups are a .zip file in the same format as your iPhone app, so a backup from either one can be restored in the other. Restoring merges into your current data; days on the same date are replaced by the backup. Back up regularly: browsers can clear site data.</div>`;
+  const dev = `<div class="acc-note" style="margin:0 0 10px">These are still being built, so they may change or have rough edges.</div>
+    <button class="devlink" data-act="comgen"><span class="dl-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${SICON.note}</svg></span><span class="dl-t"><b>ComGen</b><span>Pole test comment generator</span></span><span class="dl-ch">›</span></button>
+    <button class="devlink" data-act="projtracker"><span class="dl-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${SICON.proj}</svg></span><span class="dl-t"><b>Project Tracker</b><span>Opens inside the app</span></span><span class="dl-ch">›</span></button>`;
   const danger = `<button class="btn danger block" data-act="wipe">Delete all data on this device</button><div class="acc-note">This permanently removes every entry stored on this device. Make a backup first if you are unsure.</div>`;
   return `<h1>Settings</h1>
   <div class="sect" style="padding:12px 14px;margin-bottom:14px">
@@ -888,7 +896,7 @@ function settingsView() {
   ${canInstallHere() ? acc('install', 'Add to Home Screen', 'Recommended', install) : ''}
   ${acc('backup', 'Backup & restore', `${nm} day${nm === 1 ? '' : 's'} · Last backup: ${lastB}`, backup)}
   ${acc('danger', 'Delete all data', 'Remove everything on this device', danger, true)}
-  <div class="devwrap"><button class="acc acc-h" style="display:flex;margin-bottom:0;border-radius:14px;background:var(--card)" data-act="comgen"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${SICON.note}</svg></span><span class="acc-t"><b>ComGen</b><span>Pole test comment generator</span></span><span class="acc-chev">›</span></button><span class="sash" aria-label="In development"><span>In development</span></span></div>
+  ${acc('dev', 'In development', 'ComGen · Project Tracker', dev)}
   <div style="text-align:center;margin:30px 0 6px"><div style="font-weight:700;letter-spacing:.2px">Pole Test Tracker</div><div class="sub small egg" data-act="egg" style="margin-top:0">Designed by Luke Smith</div></div>`;
 }
 
@@ -1560,6 +1568,7 @@ document.addEventListener('click', ev => {
     case 'app-update': { el.disabled = true; el.textContent = 'Updating…'; applyUpdate(); break; }
     case 'egg': { const now = Date.now(); eggN = (now - eggT < 1500) ? eggN + 1 : 1; eggT = now; if (eggN >= 3) { eggN = 0; Game.open(); } break; }
     case 'comgen': openComGen(); break;
+    case 'projtracker': Viewer.open('Project Tracker', 'https://one4one141.github.io/pole-tracker/'); break;
     case 'sec-toggle': { V.setOpen = V.setOpen === d.sec ? null : d.sec; V.calcCopied = V.calcApplied = false; render(); if (V.setOpen) { const h = document.getElementById('acc-' + V.setOpen); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } break; }
     case 'check-update': {
       V.updMsg = 'Checking…'; render();
