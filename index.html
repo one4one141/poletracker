@@ -214,7 +214,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-14.4';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-14.5';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -1240,12 +1240,36 @@ const Viewer = {
   open(title, url, html) {
     if (document.getElementById('viewer')) return;
     const d = document.createElement('div'); d.id = 'viewer'; d.className = 'viewer';
-    d.innerHTML = `<div class="viewer-bar"><button class="vb" data-v="close">‹ Back</button><b>${esc(title)}</b><a class="vb" href="${esc(url)}" target="_blank" rel="noopener" aria-label="Open in a browser tab">↗</a></div><iframe title="${esc(title)}" allow="clipboard-write"></iframe>`;
+    d.innerHTML = `<div class="viewer-bar"><button class="vb" data-v="close">‹ Back</button><b>${esc(title)}</b><a class="vb" href="${esc(url)}" target="_blank" rel="noopener" aria-label="Open in a browser tab">↗</a></div><iframe title="${esc(title)}" allow="clipboard-write; geolocation"></iframe>`;
     const fr = d.querySelector('iframe'); if (html) fr.srcdoc = html; else fr.src = url;
+    fr.addEventListener('load', () => Viewer.hook(fr));
     document.body.appendChild(d); document.body.style.overflow = 'hidden';
     d.querySelector('[data-v="close"]').addEventListener('click', () => Viewer.close());
   },
-  close() { const d = document.getElementById('viewer'); if (d) d.remove(); render(); }
+  close() { const d = document.getElementById('viewer'); if (d) d.remove(); render(); },
+  /* Links to other websites and apps (Google Maps, Apple Maps, phone numbers...) are not allowed to open inside a frame, so
+     hand them to the phone itself instead. This works because the pages shown here are on the same site as the app. */
+  go(href, newTab) {
+    const a = document.createElement('a'); a.href = href; if (newTab) { a.target = '_blank'; a.rel = 'noopener'; }
+    a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove();
+  },
+  external(href) {
+    let u; try { u = new URL(href, location.href); } catch (e) { return false; }
+    if (/^(https?:)$/.test(u.protocol)) return u.origin !== location.origin;
+    return /^(maps:|comgooglemaps:|geo:|tel:|sms:|mailto:|waze:|whatsapp:)$/.test(u.protocol);
+  },
+  hook(fr) {
+    try {
+      const doc = fr.contentDocument, win = fr.contentWindow; if (!doc || !win || doc.__pt) return; doc.__pt = true;
+      doc.addEventListener('click', ev => {
+        const a = ev.target && ev.target.closest && ev.target.closest('a[href]'); if (!a || ev.defaultPrevented) return;
+        if (!Viewer.external(a.href)) return;
+        ev.preventDefault(); Viewer.go(a.href, /^https?:/.test(a.protocol));
+      }, true);
+      const wo = win.open ? win.open.bind(win) : null;
+      win.open = (u, ...r) => { if (u && Viewer.external(String(u))) { Viewer.go(String(u), /^https?:/.test(String(u))); return null; } return wo ? wo(u, ...r) : null; };
+    } catch (e) { /* page is on another site: nothing we can do from here */ }
+  }
 };
 
 /* ------------------------------------------------------------------ ComGen (pole test comment generator) link */
