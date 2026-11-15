@@ -109,6 +109,10 @@ tailwind.config = {
 <div id="app" class="mx-auto flex h-dvh max-w-[480px] flex-col overflow-hidden bg-bg"></div>
 
 <script>
+// ========== APP META ==========
+const APP_VERSION = "1.1.0";
+const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
+
 // ========== DATA & LOGIC (ported from comment.ts) ==========
 const TEST_TYPES = [
   "Stage 1","Stage 1A (Soft)","Stage 1A (Hard)","Stage 2","Stage 3","Incomplete","Pole Recovered"
@@ -448,7 +452,8 @@ const state = {
   commentOpen: false,
   toast: null,
   copied: false,
-  lastSectionKey: ""
+  lastSectionKey: "",
+  updateStatus: ""
 };
 
 function applyTheme(p){
@@ -622,6 +627,41 @@ function esc(s){
   return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
+
+async function checkForUpdates(opts = {}){
+  const { silent = false } = opts;
+  const setStatus = (msg, warn = false) => {
+    state.updateStatus = msg;
+    if(!silent){
+      // Refresh settings panel if open
+      if(state.settings) render();
+      else showToast(msg, warn);
+    } else if(state.settings){
+      render();
+    }
+  };
+  try{
+    if(APP_VERSION_CHECK_URL){
+      setStatus(silent ? state.updateStatus : "Checking…");
+      const res = await fetch(APP_VERSION_CHECK_URL + (APP_VERSION_CHECK_URL.includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const remote = (await res.text()).trim();
+      if(!remote) throw new Error("Empty response");
+      if(remote === APP_VERSION){
+        setStatus("You're on the latest version (v" + APP_VERSION + ").");
+      } else {
+        setStatus("Update available: v" + remote + " (you have v" + APP_VERSION + "). Re-download the HTML file to update.", true);
+        if(silent) showToast("Update available: v" + remote, true);
+      }
+      try{ localStorage.setItem("ptcg-last-update-check", JSON.stringify({ at: Date.now(), remote, local: APP_VERSION })); }catch(e){}
+    } else {
+      // Single-file / offline mode — no remote endpoint configured
+      setStatus("You're on v" + APP_VERSION + ". This is a single-file app; replace the file to update.");
+    }
+  }catch(e){
+    setStatus("Could not check for updates. You're on v" + APP_VERSION + ".", true);
+  }
+}
 
 function scrollToNewContent(){
   // After render, bring the newest section into view inside main
@@ -810,15 +850,30 @@ function render(){
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
-          <div class="p-4 pb-6">
-            <p class="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted">Appearance</p>
-            <div class="grid grid-cols-3 gap-2">
-              ${["light","dark","system"].map(p => `
-                <button type="button" data-theme-pref="${p}"
-                  class="min-h-12 rounded-xl border-[1.5px] text-sm font-semibold capitalize ${state.pref===p ? "border-primary bg-primary-soft text-primary" : "border-transparent bg-pill text-muted"}">${p}</button>
-              `).join("")}
+          <div class="p-4 pb-6 space-y-5">
+            <div>
+              <p class="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted">Appearance</p>
+              <div class="grid grid-cols-3 gap-2">
+                ${["light","dark","system"].map(p => `
+                  <button type="button" data-theme-pref="${p}"
+                    class="min-h-12 rounded-xl border-[1.5px] text-sm font-semibold capitalize ${state.pref===p ? "border-primary bg-primary-soft text-primary" : "border-transparent bg-pill text-muted"}">${p}</button>
+                `).join("")}
+              </div>
+              <p class="mt-2 text-xs leading-snug text-muted">System follows your device light or dark setting.</p>
             </div>
-            <p class="mt-2 text-xs leading-snug text-muted">System follows your device light or dark setting.</p>
+            <div class="border-t border-border pt-4">
+              <p class="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted">About</p>
+              <div class="flex items-center justify-between gap-3 rounded-xl bg-pill px-3.5 py-3">
+                <div>
+                  <p class="text-sm font-semibold text-fg">Version</p>
+                  <p class="text-xs text-muted">v${esc(APP_VERSION)}</p>
+                </div>
+                <button type="button" id="btn-check-update" class="min-h-10 shrink-0 rounded-full bg-card px-3.5 text-sm font-semibold text-primary border border-border">
+                  Check for updates
+                </button>
+              </div>
+              <p id="update-status" class="mt-2 text-xs leading-snug text-muted">${esc(state.updateStatus || "Checked on open. Tap to check again.")}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -859,8 +914,17 @@ function render(){
     `;
   }
 
+  // Preserve scroll position — full innerHTML replace would otherwise jump to top
+  const mainBefore = document.querySelector("main");
+  const savedScroll = mainBefore ? mainBefore.scrollTop : 0;
+
   root.innerHTML = html;
   bindEvents();
+
+  const mainAfter = document.querySelector("main");
+  if(mainAfter){
+    mainAfter.scrollTop = savedScroll;
+  }
 
   // Auto-scroll when a new section appears (after filling previous fields)
   const sectionKey = [
@@ -899,6 +963,7 @@ function bindEvents(){
   document.querySelectorAll("[data-theme-pref]").forEach(btn => {
     btn.addEventListener("click", () => chooseTheme(btn.dataset.themePref));
   });
+  document.getElementById("btn-check-update")?.addEventListener("click", () => checkForUpdates({ silent: false }));
 
   document.querySelectorAll("[data-type]").forEach(btn => {
     btn.addEventListener("click", () => onType(btn.dataset.type));
@@ -970,6 +1035,8 @@ function bindEvents(){
 }
 
 render();
+// Check for updates on open (silent unless outdated / error with remote URL)
+checkForUpdates({ silent: true });
 </script>
 </body>
 </html>
