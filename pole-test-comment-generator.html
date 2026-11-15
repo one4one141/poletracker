@@ -85,7 +85,7 @@ tailwind.config = {
     --color-skip-bd: #64748b;
     --color-danger: #f87171;
   }
-  html, body { height: 100%; margin: 0; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
   body {
     font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
     background: var(--color-bg);
@@ -106,7 +106,7 @@ tailwind.config = {
 </script>
 </head>
 <body>
-<div id="app" class="mx-auto flex min-h-full max-w-[480px] flex-col bg-bg"></div>
+<div id="app" class="mx-auto flex h-dvh max-w-[480px] flex-col overflow-hidden bg-bg"></div>
 
 <script>
 // ========== DATA & LOGIC (ported from comment.ts) ==========
@@ -624,47 +624,50 @@ function esc(s){
 
 
 function scrollToNewContent(){
-  // After render, scroll so the newest section is clearly in view
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const main = document.querySelector("main");
-      if(!main) return;
-      const extras = document.getElementById("extras");
-      const result = document.getElementById("sel-result");
-      const reason = document.getElementById("sel-reason");
-      // Prefer the newest interactive block
-      let target = extras || reason || result;
-      if(!target){
-        // Fall back to last test row or last child
-        const rows = main.querySelectorAll("section > div");
-        target = rows.length ? rows[rows.length - 1] : main.lastElementChild;
-      }
-      if(target){
-        // Scroll with offset so content sits comfortably above the fixed footer
-        const rect = target.getBoundingClientRect();
-        const footerH = 72;
-        const desiredTop = 80; // below sticky header
-        if(rect.bottom > window.innerHeight - footerH - 16 || rect.top < desiredTop){
-          const top = main.scrollTop + rect.top - desiredTop;
-          main.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-        }
-      }
-      updateScrollHint();
-    });
-  });
+  // After render, bring the newest section into view inside main
+  const run = () => {
+    const main = document.querySelector("main");
+    if(!main) return;
+    const extras = document.getElementById("extras");
+    const result = document.getElementById("sel-result");
+    const reason = document.getElementById("sel-reason");
+    let target = extras || reason || result;
+    if(!target){
+      const rows = main.querySelectorAll("section > div");
+      target = rows.length ? rows[rows.length - 1] : main.lastElementChild;
+    }
+    if(target){
+      // Position target near top of main (under header), above footer
+      const mainRect = main.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offsetInsideMain = targetRect.top - mainRect.top + main.scrollTop;
+      const desired = Math.max(0, offsetInsideMain - 12);
+      main.scrollTo({ top: desired, behavior: "smooth" });
+    }
+    updateScrollHint();
+  };
+  requestAnimationFrame(() => requestAnimationFrame(run));
+  // Second pass after fonts/layout settle
+  setTimeout(run, 120);
 }
 
 function updateScrollHint(){
   const main = document.querySelector("main");
   const hint = document.getElementById("scroll-hint");
   if(!main || !hint) return;
+  // Need a real overflow: content taller than the visible main area
   const remaining = main.scrollHeight - main.scrollTop - main.clientHeight;
-  if(remaining > 24){
+  const canScroll = main.scrollHeight > main.clientHeight + 8;
+  if(canScroll && remaining > 20){
+    hint.style.opacity = "1";
     hint.classList.remove("opacity-0", "pointer-events-none");
     hint.classList.add("opacity-100");
+    hint.setAttribute("aria-hidden", "false");
   } else {
+    hint.style.opacity = "0";
     hint.classList.add("opacity-0", "pointer-events-none");
     hint.classList.remove("opacity-100");
+    hint.setAttribute("aria-hidden", "true");
   }
 }
 
@@ -683,7 +686,7 @@ function render(){
     </button>
   </header>
 
-  <main class="flex-1 overflow-y-auto overscroll-contain px-4 pb-32 pt-4" style="-webkit-overflow-scrolling:touch">
+  <main class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-28 pt-4" style="-webkit-overflow-scrolling:touch">
   `;
 
   if(!state.testType){
@@ -784,9 +787,9 @@ function render(){
 
   html += `</main>
 
-  <div id="scroll-hint" class="pointer-events-none fixed bottom-20 left-1/2 z-30 -translate-x-1/2 opacity-0 transition-opacity duration-200">
-    <div class="flex items-center gap-1.5 rounded-full bg-navy/90 px-3.5 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+  <div id="scroll-hint" class="pointer-events-none fixed bottom-[5.5rem] left-1/2 z-40 -translate-x-1/2 opacity-0 transition-opacity duration-300" aria-hidden="true">
+    <div class="flex items-center gap-1.5 rounded-full border border-primary/40 bg-navy px-4 py-2.5 text-[13px] font-semibold text-white shadow-xl">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="animate-bounce"><path d="m6 9 6 6 6-6"/></svg>
       More fields below
     </div>
   </div>
@@ -873,12 +876,17 @@ function render(){
   if(sectionKey !== state.lastSectionKey && state.testType){
     const prev = state.lastSectionKey;
     state.lastSectionKey = sectionKey;
-    // Only scroll when something new was added (not on first paint of type)
+    // Scroll when something new was added within the same test type
     if(prev && prev.split("::")[0] === state.testType){
       scrollToNewContent();
+    } else {
+      // First paint of a type — still check if content overflows
+      requestAnimationFrame(() => requestAnimationFrame(updateScrollHint));
+      setTimeout(updateScrollHint, 100);
     }
   } else {
     state.lastSectionKey = sectionKey;
+    requestAnimationFrame(() => requestAnimationFrame(updateScrollHint));
   }
 }
 
