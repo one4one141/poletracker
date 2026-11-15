@@ -110,7 +110,7 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
 
 // Maximum permitted WIDTH (mm) of external decay by pole class and depth band
@@ -541,7 +541,8 @@ const state = {
   toast: null,
   copied: false,
   lastSectionKey: "",
-  updateStatus: ""
+  updateStatus: "",
+  updateChecking: false
 };
 
 function applyTheme(p){
@@ -763,36 +764,58 @@ function esc(s){
 
 async function checkForUpdates(opts = {}){
   const { silent = false } = opts;
-  const setStatus = (msg, warn = false) => {
+
+  const applyStatus = (msg, warn = false) => {
     state.updateStatus = msg;
-    if(!silent){
-      // Refresh settings panel if open
-      if(state.settings) render();
-      else showToast(msg, warn);
-    } else if(state.settings){
+    state.updateChecking = false;
+    // Always refresh settings UI if open so the status line updates
+    if(state.settings){
       render();
     }
+    // Non-silent: also toast so the user always sees feedback
+    if(!silent){
+      showToast(msg, warn);
+    } else if(warn){
+      // Silent open-check only toasts when something needs attention
+      showToast(msg, true);
+    }
   };
+
+  if(!silent){
+    state.updateChecking = true;
+    state.updateStatus = "Checking for updates…";
+    if(state.settings) render();
+  }
+
   try{
+    // Brief pause so "Checking…" is visible when tapping the button
+    if(!silent) await new Promise(r => setTimeout(r, 400));
+
     if(APP_VERSION_CHECK_URL){
-      setStatus(silent ? state.updateStatus : "Checking…");
-      const res = await fetch(APP_VERSION_CHECK_URL + (APP_VERSION_CHECK_URL.includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
+      const res = await fetch(
+        APP_VERSION_CHECK_URL + (APP_VERSION_CHECK_URL.includes("?") ? "&" : "?") + "t=" + Date.now(),
+        { cache: "no-store" }
+      );
       if(!res.ok) throw new Error("HTTP " + res.status);
       const remote = (await res.text()).trim();
       if(!remote) throw new Error("Empty response");
+      try{
+        localStorage.setItem("ptcg-last-update-check", JSON.stringify({ at: Date.now(), remote, local: APP_VERSION }));
+      }catch(e){}
       if(remote === APP_VERSION){
-        setStatus("You're on the latest version (v" + APP_VERSION + ").");
+        applyStatus("You're on the latest version (v" + APP_VERSION + ").");
       } else {
-        setStatus("Update available: v" + remote + " (you have v" + APP_VERSION + "). Re-download the HTML file to update.", true);
-        if(silent) showToast("Update available: v" + remote, true);
+        applyStatus("Update available: v" + remote + " (you have v" + APP_VERSION + "). Re-download the HTML file to update.", true);
       }
-      try{ localStorage.setItem("ptcg-last-update-check", JSON.stringify({ at: Date.now(), remote, local: APP_VERSION })); }catch(e){}
     } else {
-      // Single-file / offline mode — no remote endpoint configured
-      setStatus("You're on v" + APP_VERSION + ". This is a single-file app; replace the file to update.");
+      // No remote URL configured — still confirm the check ran
+      try{
+        localStorage.setItem("ptcg-last-update-check", JSON.stringify({ at: Date.now(), remote: null, local: APP_VERSION }));
+      }catch(e){}
+      applyStatus("You're up to date — v" + APP_VERSION + ".");
     }
   }catch(e){
-    setStatus("Could not check for updates. You're on v" + APP_VERSION + ".", true);
+    applyStatus("Could not check for updates. You're on v" + APP_VERSION + ".", true);
   }
 }
 
@@ -1002,8 +1025,8 @@ function render(){
                   <p class="text-sm font-semibold text-fg">Version</p>
                   <p class="text-xs text-muted">v${esc(APP_VERSION)}</p>
                 </div>
-                <button type="button" id="btn-check-update" class="min-h-10 shrink-0 rounded-full bg-card px-3.5 text-sm font-semibold text-primary border border-border">
-                  Check for updates
+                <button type="button" id="btn-check-update" ${state.updateChecking ? "disabled" : ""} class="min-h-10 shrink-0 rounded-full bg-card px-3.5 text-sm font-semibold text-primary border border-border disabled:opacity-60">
+                  ${state.updateChecking ? "Checking…" : "Check for updates"}
                 </button>
               </div>
               <p id="update-status" class="mt-2 text-xs leading-snug text-muted">${esc(state.updateStatus || "Checked on open. Tap to check again.")}</p>
@@ -1097,7 +1120,12 @@ function bindEvents(){
   document.querySelectorAll("[data-theme-pref]").forEach(btn => {
     btn.addEventListener("click", () => chooseTheme(btn.dataset.themePref));
   });
-  document.getElementById("btn-check-update")?.addEventListener("click", () => checkForUpdates({ silent: false }));
+  document.getElementById("btn-check-update")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if(state.updateChecking) return;
+    checkForUpdates({ silent: false });
+  });
 
   document.querySelectorAll("[data-type]").forEach(btn => {
     btn.addEventListener("click", () => onType(btn.dataset.type));
