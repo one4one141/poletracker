@@ -520,22 +520,30 @@ function setTest(key, value){
   render();
 }
 
-function setExtra(key, value){
+function setExtra(key, value, opts = {}){
+  const { rerender = true, structural = false } = opts;
   const next = {...state.extras, [key]: value};
-  if(key === "markVisible" && value !== "Yes") delete next.markHeight;
-  if(key === "tncReason" && value !== "Power Conflict") delete next.a1024;
+  let needsStructural = structural;
+  if(key === "markVisible" && value !== "Yes") { delete next.markHeight; needsStructural = true; }
+  if(key === "markVisible" && value === "Yes") { needsStructural = true; }
+  if(key === "tncReason" && value !== "Power Conflict") { delete next.a1024; needsStructural = true; }
+  if(key === "tncReason" && value === "Power Conflict") { needsStructural = true; }
+  if(key === "tncReason" && value) { needsStructural = true; } // details field appears
   if(key === "unableReason"){
     delete next.circumference; delete next.sectorA; delete next.sectorB; delete next.sectorC; delete next.details;
+    needsStructural = true;
   }
   if(key === "dmoPossible"){
     delete next.obstruction; delete next.otherComments;
+    needsStructural = true;
   }
   if(key === "decayType"){
     delete next.depth615; delete next.depth1530; delete next.depth30;
     state.locations = [];
+    needsStructural = true;
   }
   state.extras = next;
-  render();
+  if(rerender || needsStructural) render();
 }
 
 function toggleLocation(o){
@@ -580,7 +588,7 @@ function fieldControl(field){
     return `<label class="block">
       <span class="mb-1.5 block text-sm font-semibold">${esc(field.label)}</span>
       <textarea class="field" maxlength="${max}" data-extra="${esc(field.key)}">${esc(value)}</textarea>
-      <span class="mt-1 block text-right text-xs text-muted">${left} char(s) remaining</span>
+      <span class="char-count mt-1 block text-right text-xs text-muted">${left} char(s) remaining</span>
     </label>`;
   }
   if(field.kind === "select"){
@@ -616,19 +624,48 @@ function esc(s){
 
 
 function scrollToNewContent(){
-  // After render, scroll so the newest incomplete section is in view
+  // After render, scroll so the newest section is clearly in view
   requestAnimationFrame(() => {
-    const main = document.querySelector("main");
-    if(!main) return;
-    // Prefer scrolling to the extras section if present, else bottom of main content
-    const extras = document.getElementById("extras");
-    const target = extras || main.lastElementChild;
-    if(target){
-      target.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    } else {
-      main.scrollTo({ top: main.scrollHeight, behavior: "smooth" });
-    }
+    requestAnimationFrame(() => {
+      const main = document.querySelector("main");
+      if(!main) return;
+      const extras = document.getElementById("extras");
+      const result = document.getElementById("sel-result");
+      const reason = document.getElementById("sel-reason");
+      // Prefer the newest interactive block
+      let target = extras || reason || result;
+      if(!target){
+        // Fall back to last test row or last child
+        const rows = main.querySelectorAll("section > div");
+        target = rows.length ? rows[rows.length - 1] : main.lastElementChild;
+      }
+      if(target){
+        // Scroll with offset so content sits comfortably above the fixed footer
+        const rect = target.getBoundingClientRect();
+        const footerH = 72;
+        const desiredTop = 80; // below sticky header
+        if(rect.bottom > window.innerHeight - footerH - 16 || rect.top < desiredTop){
+          const top = main.scrollTop + rect.top - desiredTop;
+          main.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        }
+      }
+      updateScrollHint();
+    });
   });
+}
+
+function updateScrollHint(){
+  const main = document.querySelector("main");
+  const hint = document.getElementById("scroll-hint");
+  if(!main || !hint) return;
+  const remaining = main.scrollHeight - main.scrollTop - main.clientHeight;
+  if(remaining > 24){
+    hint.classList.remove("opacity-0", "pointer-events-none");
+    hint.classList.add("opacity-100");
+  } else {
+    hint.classList.add("opacity-0", "pointer-events-none");
+    hint.classList.remove("opacity-100");
+  }
 }
 
 function render(){
@@ -646,7 +683,7 @@ function render(){
     </button>
   </header>
 
-  <main class="flex-1 overflow-y-auto px-4 pb-28 pt-4">
+  <main class="flex-1 overflow-y-auto overscroll-contain px-4 pb-32 pt-4" style="-webkit-overflow-scrolling:touch">
   `;
 
   if(!state.testType){
@@ -746,6 +783,13 @@ function render(){
   // Comment is shown as a popup modal (rendered after footer)
 
   html += `</main>
+
+  <div id="scroll-hint" class="pointer-events-none fixed bottom-20 left-1/2 z-30 -translate-x-1/2 opacity-0 transition-opacity duration-200">
+    <div class="flex items-center gap-1.5 rounded-full bg-navy/90 px-3.5 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      More fields below
+    </div>
+  </div>
 
   <footer class="fixed bottom-0 left-0 right-0 z-20 mx-auto flex max-w-[480px] gap-2 border-t border-border bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
     <button type="button" id="btn-reset" class="min-h-12 flex-1 rounded-xl bg-pill text-[15px] font-semibold text-muted">Reset</button>
@@ -872,10 +916,26 @@ function bindEvents(){
   document.querySelectorAll("[data-extra]").forEach(el => {
     const key = el.dataset.extra;
     if(el.type === "radio"){
-      el.addEventListener("change", () => { if(el.checked) setExtra(key, el.value); });
+      el.addEventListener("change", () => { if(el.checked) setExtra(key, el.value, { structural: true }); });
+    } else if(el.tagName === "SELECT"){
+      // Selects can unlock new fields — always re-render
+      el.addEventListener("change", () => setExtra(key, el.value, { structural: true }));
     } else {
-      el.addEventListener("input", () => setExtra(key, el.value));
-      el.addEventListener("change", () => setExtra(key, el.value));
+      // Text / textarea / number / date: update state without re-render while typing
+      // so the keyboard stays open and focus is preserved
+      el.addEventListener("input", () => {
+        setExtra(key, el.value, { rerender: false });
+        // Update char counter for textareas without full re-render
+        if(el.tagName === "TEXTAREA"){
+          const counter = el.parentElement && el.parentElement.querySelector(".char-count");
+          if(counter){
+            const left = 250 - el.value.length;
+            counter.textContent = left + " char(s) remaining";
+          }
+        }
+      });
+      // On blur, still no structural change needed for plain text
+      el.addEventListener("change", () => setExtra(key, el.value, { rerender: false }));
     }
   });
 
@@ -891,6 +951,14 @@ function bindEvents(){
   document.getElementById("comment-overlay")?.addEventListener("click", (e) => {
     if(e.target.id === "comment-overlay"){ state.commentOpen = false; state.copied = false; render(); }
   });
+
+  // Scroll hint visibility
+  const main = document.querySelector("main");
+  if(main){
+    main.addEventListener("scroll", updateScrollHint, { passive: true });
+    // Initial check after layout
+    requestAnimationFrame(updateScrollHint);
+  }
 }
 
 render();
