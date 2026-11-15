@@ -110,7 +110,7 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.4.2";
+const APP_VERSION = "1.4.3";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
 
 // Maximum permitted WIDTH (mm) of external decay by pole class and depth band
@@ -168,7 +168,7 @@ const SATURN = ["A","B","C","RT"];
 const COUNTS = ["0","1","2","3","4","5+"];
 
 function ta(key, label, optional=false){ return {key,label,kind:"textarea",optional}; }
-function num(key, label, unit="mm"){ return {key,label,kind:"number",unit}; }
+function num(key, label, unit="mm", optional=false){ return {key,label,kind:"number",unit,optional}; }
 function sel(key, label, options){ return {key,label,kind:"select",options}; }
 function txt(key, label, optional=false){ return {key,label,kind:"text",optional}; }
 
@@ -316,10 +316,11 @@ function extraSections(testType, result, reason, extras){
     ]}];
     const dt = extras.decayType;
     if(dt === "External" || dt === "Internal & External"){
+      sections.push({type:"note", text:"Enter at least one decay width (mm). The other depth bands are optional."});
       sections.push({type:"fields", fields:[
-        num("depth615","Width at depth >6mm – 15mm"),
-        num("depth1530","Width at depth >15mm – 30mm"),
-        num("depth30","Width at depth >30mm")
+        num("depth615","Width at depth >6mm – 15mm", "mm", true),
+        num("depth1530","Width at depth >15mm – 30mm", "mm", true),
+        num("depth30","Width at depth >30mm", "mm", true)
       ]});
       sections.push({type:"checks", key:"location", label:"Location", options:["BGL","ATGL","ABGL"]});
     } else if(dt === "Internal"){
@@ -525,10 +526,17 @@ function validate(data){
     return unique.length === 1 ? `Please enter text in: ${unique[0]}` : `Please enter text in: ${unique.join(", ")}`;
   }
 
-  // External decay: within limits → cannot generate comment; exceeds → allowed
+  // External decay: at least one width required; within limits → cannot generate; exceeds → allowed
   if(needsDecayWidthChecks(data.testResult, data.extras)){
     if(!data.extras.poleClass){
       return "Please select a Pole Class.";
+    }
+    const hasWidth = ["depth615","depth1530","depth30"].some(k => {
+      const v = data.extras[k];
+      return v !== undefined && v !== null && String(v).trim() !== "" && !Number.isNaN(Number(v));
+    });
+    if(!hasWidth){
+      return "Please enter at least one decay width measurement.";
     }
     const decay = evaluateDecayWidths(data.extras);
     if(!decay.ok){
@@ -725,8 +733,9 @@ function fieldControl(field){
       <div class="flex flex-wrap gap-3">${opts}</div></fieldset>`;
   }
   const type = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
+  const optTag = field.optional ? ` <span class="font-normal text-muted">(optional)</span>` : "";
   return `<label class="block">
-    <span class="mb-1.5 block text-sm font-semibold">${esc(field.label)}</span>
+    <span class="mb-1.5 block text-sm font-semibold">${esc(field.label)}${optTag}</span>
     <span class="flex items-center gap-2">
       <input class="field" type="${type}" value="${esc(value)}" data-extra="${esc(field.key)}"/>
       ${field.unit ? `<span class="text-sm text-muted">${esc(field.unit)}</span>` : ""}
@@ -970,7 +979,12 @@ function render(){
     html += `<div id="extras" class="mt-3 space-y-3.5 border-t border-border pt-3">`;
     sections.forEach((section, i) => {
       if(section.type === "note"){
-        html += `<p class="py-2 text-center text-[15px] font-bold text-danger">${esc(section.text)}</p>`;
+        const isDmo = section.text && section.text.indexOf("Do not proceed") >= 0;
+        if(isDmo){
+          html += `<p class="py-2 text-center text-[15px] font-bold text-danger">${esc(section.text)}</p>`;
+        } else {
+          html += `<p class="rounded-xl bg-primary-soft px-3 py-2 text-[13px] font-medium leading-snug text-primary">${esc(section.text)}</p>`;
+        }
       } else if(section.type === "checks"){
         html += `<fieldset>
           <legend class="mb-1.5 text-sm font-semibold">${esc(section.label)}</legend>
