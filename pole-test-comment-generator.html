@@ -110,7 +110,7 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
 
 // Maximum permitted WIDTH (mm) of external decay by pole class and depth band
@@ -456,8 +456,10 @@ function decayLimitFor(poleClass){
 }
 
 /** Returns { ok, messages, overs, withins } for external decay widths.
- *  ≤ max  → within allowed limits (pole measurement passes that band)
- *  > max  → exceeds maximum allowed measurement
+ *  Domain rules:
+ *    ≤ max  → within allowed limits → GREEN banner, CANNOT generate comment
+ *    > max  → exceeds maximum → no banner, CAN generate comment
+ *  ok = true when submit is allowed (at least one band exceeds, or no widths entered yet)
  */
 function evaluateDecayWidths(extras){
   const poleClass = extras.poleClass || "";
@@ -477,14 +479,17 @@ function evaluateDecayWidths(extras){
     if(Number.isNaN(value) || value < 0) continue;
     const label = DECAY_BAND_LABELS[b.key];
     if(value > b.max){
-      result.ok = false;
       result.overs.push({ key: b.key, label, value, max: b.max });
       result.messages.push(label + " exceeds the maximum allowed measurements (max " + b.max + "mm).");
     } else {
-      // value is 0..max inclusive → within allowed limits / pass
       result.withins.push({ key: b.key, label, value, max: b.max });
       result.messages.push(label + " is within allowed limits.");
     }
+  }
+  // Block submit when any measurement is within limits and none exceed
+  // Allow submit when at least one band exceeds the maximum
+  if(result.withins.length && !result.overs.length){
+    result.ok = false;
   }
   return result;
 }
@@ -520,14 +525,14 @@ function validate(data){
     return unique.length === 1 ? `Please enter text in: ${unique[0]}` : `Please enter text in: ${unique.join(", ")}`;
   }
 
-  // External decay width limits by pole class
+  // External decay: within limits → cannot generate comment; exceeds → allowed
   if(needsDecayWidthChecks(data.testResult, data.extras)){
     if(!data.extras.poleClass){
       return "Please select a Pole Class.";
     }
     const decay = evaluateDecayWidths(data.extras);
     if(!decay.ok){
-      return decay.messages.filter(m => m.includes("exceeds")).join(" ");
+      return "Decay measurements are within allowed limits — a decayed-pole comment cannot be generated.";
     }
   }
   return null;
@@ -736,17 +741,13 @@ function decayBannerHtml(){
   const poleClass = state.extras.poleClass || "";
   if(!poleClass) return "";
   const decay = evaluateDecayWidths(state.extras);
-  if(!decay.overs.length && !decay.withins.length) return "";
+  // Only show green banners when measurements are WITHIN allowed limits
+  // No banner when measurements exceed the maximum
+  if(!decay.withins.length) return "";
   const parts = [];
-  // Within allowed limits (≤ max) — red info banner matching reference app
   for(const w of decay.withins){
-    parts.push(`<div class="bg-danger px-3 py-2.5 text-center text-[13px] font-semibold italic leading-snug text-white">${esc(w.label)} is within allowed limits</div>`);
+    parts.push(`<div class="px-3 py-2.5 text-center text-[13px] font-semibold italic leading-snug text-white" style="background:#16a34a">${esc(w.label)} is within allowed limits</div>`);
   }
-  // Exceeds maximum allowed measurement
-  for(const o of decay.overs){
-    parts.push(`<div class="bg-danger px-3 py-2.5 text-center text-[13px] font-semibold italic leading-snug text-white">${esc(o.label)} exceeds the maximum allowed measurements</div>`);
-  }
-  if(!parts.length) return "";
   return `<div class="sticky top-0 z-10 -mx-4 mb-3 overflow-hidden shadow-sm">${parts.join("")}</div>`;
 }
 
@@ -759,11 +760,11 @@ function decayFieldHint(key){
   const value = raw === undefined || raw === null || String(raw).trim() === "" ? null : Number(raw);
   if(value !== null && !Number.isNaN(value)){
     if(value > max){
-      return `<span class="decay-hint mt-1 block text-xs font-semibold text-danger">Exceeds maximum allowed (max ${max}mm)</span>`;
+      return `<span class="decay-hint mt-1 block text-xs text-muted">Exceeds maximum (max ${max}mm) — comment can be generated</span>`;
     }
-    return `<span class="decay-hint mt-1 block text-xs font-semibold text-pass-fg">Within allowed limits (max ${max}mm)</span>`;
+    return `<span class="decay-hint mt-1 block text-xs font-semibold text-pass-fg">Within allowed limits (max ${max}mm) — cannot generate comment</span>`;
   }
-  return `<span class="decay-hint mt-1 block text-xs text-muted">Maximum permitted width: ${max}mm (and below passes)</span>`;
+  return `<span class="decay-hint mt-1 block text-xs text-muted">Maximum permitted width: ${max}mm</span>`;
 }
 
 function esc(s){
@@ -1190,14 +1191,14 @@ function bindEvents(){
               const value = el.value.trim() === "" ? null : Number(el.value);
               if(value !== null && !Number.isNaN(value)){
                 if(value > max){
-                  hint.textContent = "Exceeds maximum allowed (max " + max + "mm)";
-                  hint.className = "decay-hint mt-1 block text-xs font-semibold text-danger";
+                  hint.textContent = "Exceeds maximum (max " + max + "mm) — comment can be generated";
+                  hint.className = "decay-hint mt-1 block text-xs text-muted";
                 } else {
-                  hint.textContent = "Within allowed limits (max " + max + "mm)";
+                  hint.textContent = "Within allowed limits (max " + max + "mm) — cannot generate comment";
                   hint.className = "decay-hint mt-1 block text-xs font-semibold text-pass-fg";
                 }
               } else {
-                hint.textContent = "Maximum permitted width: " + max + "mm (and below passes)";
+                hint.textContent = "Maximum permitted width: " + max + "mm";
                 hint.className = "decay-hint mt-1 block text-xs text-muted";
               }
             }
