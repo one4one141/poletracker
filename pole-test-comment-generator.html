@@ -110,8 +110,21 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.3.0";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
+
+// Maximum permitted WIDTH (mm) of external decay by pole class and depth band
+// Source: permitted decay width table
+const DECAY_LIMITS = {
+  "Light or Extra Light": { depth615: 60, depth1530: 40, depth30: 25 },
+  "Medium":               { depth615: 90, depth1530: 60, depth30: 34 },
+  "Stout":                { depth615: 120, depth1530: 75, depth30: 45 },
+};
+const DECAY_BAND_LABELS = {
+  depth615: "Decay between 6 and 15mm deep",
+  depth1530: "Decay between 15 and 30mm deep",
+  depth30: "Decay >30mm deep",
+};
 
 // ========== DATA & LOGIC (ported from comment.ts) ==========
 const TEST_TYPES = [
@@ -156,11 +169,33 @@ function num(key, label, unit="mm"){ return {key,label,kind:"number",unit}; }
 function sel(key, label, options){ return {key,label,kind:"select",options}; }
 function txt(key, label, optional=false){ return {key,label,kind:"text",optional}; }
 
-function requiredTestKeys(testType){
+function requiredTestKeys(testType, tests = {}){
   const cfg = FIELD_CONFIG[testType];
-  const keys = [...cfg.tests];
-  if(cfg.showDrillPattern) keys.push("drillPattern");
-  if(cfg.showDigType) keys.push("digType");
+  if(!cfg) return [];
+  // Build ordered list with conditional drill pattern / dig type / climb
+  // Order matches field workflow: resistograph → drill pattern → dig → dig type → climb
+  const keys = [];
+  for(const k of cfg.tests){
+    if(k === "climb"){
+      // Climb hidden when dig or resistograph failed
+      if(tests.dig === "Fail" || tests.resistograph === "Fail") continue;
+      keys.push("climb");
+      continue;
+    }
+    keys.push(k);
+    if(k === "resistograph" && cfg.showDrillPattern){
+      // Drill Pattern only when resistograph is Pass or Fail (not "Not done" / empty)
+      if(tests.resistograph === "Pass" || tests.resistograph === "Fail"){
+        keys.push("drillPattern");
+      }
+    }
+    if(k === "dig" && cfg.showDigType){
+      // Dig Type only when dig is Pass or Fail
+      if(tests.dig === "Pass" || tests.dig === "Fail"){
+        keys.push("digType");
+      }
+    }
+  }
   return keys;
 }
 
@@ -279,9 +314,9 @@ function extraSections(testType, result, reason, extras){
     const dt = extras.decayType;
     if(dt === "External" || dt === "Internal & External"){
       sections.push({type:"fields", fields:[
-        num("depth615","Depth (>6mm - 15mm)"),
-        num("depth1530","Depth (>15mm - 30mm)"),
-        num("depth30","Depth (>30mm)")
+        num("depth615","Width at depth >6mm – 15mm"),
+        num("depth1530","Width at depth >15mm – 30mm"),
+        num("depth30","Width at depth >30mm")
       ]});
       sections.push({type:"checks", key:"location", label:"Location", options:["BGL","ATGL","ABGL"]});
     } else if(dt === "Internal"){
@@ -412,9 +447,51 @@ function buildComment(data){
   return parts.join(" ").replace(/\s+/g," ").replace(/\.\s*\./g,".").trim();
 }
 
+
+function decayLimitFor(poleClass){
+  return DECAY_LIMITS[poleClass] || null;
+}
+
+/** Returns { ok, messages, overs: [{key, label, value, max}] } for external decay widths */
+function evaluateDecayWidths(extras){
+  const poleClass = extras.poleClass || "";
+  const limits = decayLimitFor(poleClass);
+  const result = { ok: true, messages: [], overs: [], withins: [] };
+  if(!limits) return result;
+
+  const bands = [
+    { key: "depth615", max: limits.depth615 },
+    { key: "depth1530", max: limits.depth1530 },
+    { key: "depth30", max: limits.depth30 },
+  ];
+  for(const b of bands){
+    const raw = extras[b.key];
+    if(raw === undefined || raw === null || String(raw).trim() === "") continue;
+    const value = Number(raw);
+    if(Number.isNaN(value)) continue;
+    const label = DECAY_BAND_LABELS[b.key];
+    if(value > b.max){
+      result.ok = false;
+      result.overs.push({ key: b.key, label, value, max: b.max });
+      result.messages.push(label + " exceeds allowed limit (" + value + "mm > max " + b.max + "mm).");
+    } else {
+      result.withins.push({ key: b.key, label, value, max: b.max });
+      result.messages.push(label + " is within allowed limits.");
+    }
+  }
+  return result;
+}
+
+function needsDecayWidthChecks(testResult, extras){
+  if(testResult !== "Pole Decayed") return false;
+  const dt = extras.decayType || "";
+  return dt === "External" || dt === "Internal & External";
+}
+
 function validate(data){
+
   if(!data.testType) return "Please select a Test Type.";
-  const missing = requiredTestKeys(data.testType).filter(k => !data.tests[k]);
+  const missing = requiredTestKeys(data.testType, data.tests).filter(k => !data.tests[k]);
   if(missing.length){
     const names = missing.map(k => TEST_LABELS[k]);
     return names.length === 1 ? `Please select a result for: ${names[0]}` : `Please select a result for: ${names.join(", ")}`;
@@ -434,6 +511,17 @@ function validate(data){
   if(empty.length){
     const unique = [...new Set(empty)];
     return unique.length === 1 ? `Please enter text in: ${unique[0]}` : `Please enter text in: ${unique.join(", ")}`;
+  }
+
+  // External decay width limits by pole class
+  if(needsDecayWidthChecks(data.testResult, data.extras)){
+    if(!data.extras.poleClass){
+      return "Please select a Pole Class.";
+    }
+    const decay = evaluateDecayWidths(data.extras);
+    if(!decay.ok){
+      return decay.messages.filter(m => m.includes("exceeds")).join(" ");
+    }
   }
   return null;
 }
@@ -513,7 +601,18 @@ function onType(next){
 }
 
 function setTest(key, value){
-  state.tests = {...state.tests, [key]: value};
+  const next = {...state.tests, [key]: value};
+  // Clear dependent fields when parent answer hides them
+  if(key === "resistograph"){
+    if(value !== "Pass" && value !== "Fail") delete next.drillPattern;
+  }
+  if(key === "dig"){
+    if(value !== "Pass" && value !== "Fail") delete next.digType;
+  }
+  if(key === "resistograph" || key === "dig"){
+    if(next.dig === "Fail" || next.resistograph === "Fail") delete next.climb;
+  }
+  state.tests = next;
   if(state.testType && FIELD_CONFIG[state.testType].showTestResult){
     const opts = resultOptions(state.testType, state.tests);
     if(state.testResult && !opts.includes(state.testResult)){
@@ -620,7 +719,41 @@ function fieldControl(field){
       ${field.unit ? `<span class="text-sm text-muted">${esc(field.unit)}</span>` : ""}
     </span>
     ${field.key === "ptw" ? `<span class="mt-1 block text-xs text-muted">Leave PTW ref blank for council owned land.</span>` : ""}
+    ${decayFieldHint(field.key)}
   </label>`;
+}
+
+function decayBannerHtml(){
+  if(!needsDecayWidthChecks(state.testResult, state.extras)) return "";
+  const poleClass = state.extras.poleClass || "";
+  if(!poleClass) return "";
+  const decay = evaluateDecayWidths(state.extras);
+  // Show banners for bands that have a value entered
+  if(!decay.overs.length && !decay.withins.length) return "";
+  const parts = [];
+  // Overs first (red) — measurements NOT within limits
+  for(const o of decay.overs){
+    parts.push(`<div class="bg-danger px-3 py-2.5 text-center text-[13px] font-semibold italic leading-snug text-white">${esc(o.label)} exceeds allowed limits (max ${o.max}mm)</div>`);
+  }
+  // Withins — match reference app style (red info bar used in screenshots)
+  for(const w of decay.withins){
+    parts.push(`<div class="bg-danger px-3 py-2.5 text-center text-[13px] font-semibold italic leading-snug text-white">${esc(w.label)} is within allowed limits</div>`);
+  }
+  if(!parts.length) return "";
+  return `<div class="sticky top-0 z-10 -mx-4 mb-3 overflow-hidden shadow-sm">${parts.join("")}</div>`;
+}
+
+function decayFieldHint(key){
+  if(key !== "depth615" && key !== "depth1530" && key !== "depth30") return "";
+  const limits = decayLimitFor(state.extras.poleClass || "");
+  if(!limits) return `<span class="decay-hint mt-1 block text-xs text-muted">Select Pole Class to see maximum permitted width.</span>`;
+  const max = limits[key];
+  const raw = state.extras[key];
+  const value = raw === undefined || raw === null || String(raw).trim() === "" ? null : Number(raw);
+  if(value !== null && !Number.isNaN(value) && value > max){
+    return `<span class="decay-hint mt-1 block text-xs font-semibold text-danger">Max permitted: ${max}mm — ${value}mm exceeds limit</span>`;
+  }
+  return `<span class="decay-hint mt-1 block text-xs text-muted">Maximum permitted width: ${max}mm</span>`;
 }
 
 function esc(s){
@@ -714,7 +847,7 @@ function updateScrollHint(){
 function render(){
   const root = document.getElementById("app");
   const cfg = state.testType ? FIELD_CONFIG[state.testType] : null;
-  const keys = state.testType ? requiredTestKeys(state.testType) : [];
+  const keys = state.testType ? requiredTestKeys(state.testType, state.tests) : [];
   const results = (state.testType && cfg?.showTestResult) ? resultOptions(state.testType, state.tests) : [];
   const sections = state.testType ? extraSections(state.testType, state.testResult, state.reason, state.extras) : [];
 
@@ -727,6 +860,7 @@ function render(){
   </header>
 
   <main class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-28 pt-4" style="-webkit-overflow-scrolling:touch">
+    ${decayBannerHtml()}
   `;
 
   if(!state.testType){
@@ -929,7 +1063,7 @@ function render(){
   // Auto-scroll when a new section appears (after filling previous fields)
   const sectionKey = [
     state.testType || "",
-    (state.testType ? requiredTestKeys(state.testType) : []).map(k => state.tests[k] || "").join(","),
+    (state.testType ? requiredTestKeys(state.testType, state.tests) : []).map(k => state.tests[k] || "").join(","),
     state.testResult || "",
     state.reason || "",
     (state.testType ? extraSections(state.testType, state.testResult, state.reason, state.extras) : [])
@@ -996,9 +1130,9 @@ function bindEvents(){
     } else {
       // Text / textarea / number / date: update state without re-render while typing
       // so the keyboard stays open and focus is preserved
+      const isDecayWidth = key === "depth615" || key === "depth1530" || key === "depth30";
       el.addEventListener("input", () => {
         setExtra(key, el.value, { rerender: false });
-        // Update char counter for textareas without full re-render
         if(el.tagName === "TEXTAREA"){
           const counter = el.parentElement && el.parentElement.querySelector(".char-count");
           if(counter){
@@ -1006,9 +1140,30 @@ function bindEvents(){
             counter.textContent = left + " char(s) remaining";
           }
         }
+        // Live-update decay limit hint under the field without full re-render
+        if(isDecayWidth){
+          const hint = el.parentElement && el.parentElement.parentElement && el.parentElement.parentElement.querySelector(".decay-hint");
+          if(hint){
+            const limits = decayLimitFor(state.extras.poleClass || "");
+            if(!limits){
+              hint.textContent = "Select Pole Class to see maximum permitted width.";
+              hint.className = "decay-hint mt-1 block text-xs text-muted";
+            } else {
+              const max = limits[key];
+              const value = el.value.trim() === "" ? null : Number(el.value);
+              if(value !== null && !Number.isNaN(value) && value > max){
+                hint.textContent = "Max permitted: " + max + "mm — " + value + "mm exceeds limit";
+                hint.className = "decay-hint mt-1 block text-xs font-semibold text-danger";
+              } else {
+                hint.textContent = "Maximum permitted width: " + max + "mm";
+                hint.className = "decay-hint mt-1 block text-xs text-muted";
+              }
+            }
+          }
+        }
       });
-      // On blur, still no structural change needed for plain text
-      el.addEventListener("change", () => setExtra(key, el.value, { rerender: false }));
+      // On blur/change: re-render for decay fields so the red banner updates
+      el.addEventListener("change", () => setExtra(key, el.value, { rerender: isDecayWidth }));
     }
   });
 
