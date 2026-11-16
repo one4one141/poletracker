@@ -110,7 +110,7 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.4.3";
+const APP_VERSION = "1.4.4";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
 
 // Maximum permitted WIDTH (mm) of external decay by pole class and depth band
@@ -287,9 +287,7 @@ function extraSections(testType, result, reason, extras){
   }
   if(result === "Damage Move"){
     const sections = [{type:"fields", fields:[sel("dmoPossible","Is a full or TNC dig and resi test possible?",["Yes","No"])]}];
-    if(extras.dmoPossible === "Yes"){
-      sections.push({type:"note", text:"Do not proceed. This is not DMO."});
-    } else if(extras.dmoPossible === "No"){
+    if(extras.dmoPossible === "No"){
       sections.push({type:"fields", fields:[ta("obstruction","Provide details about the obstruction(s)"), ta("otherComments","Any other comments?",true)]});
     }
     return sections;
@@ -514,7 +512,6 @@ function validate(data){
   if(cfg.showReason && !data.reason) return "Please select a Reason.";
 
   const sections = extraSections(data.testType, data.testResult, data.reason, data.extras);
-  if(sections.some(s => s.type === "note")) return "Do not proceed. This is not DMO.";
 
   const empty = visibleFields(sections)
     .filter(f => !f.optional && !String(data.extras[f.key]||"").trim())
@@ -987,12 +984,7 @@ function render(){
     html += `<div id="extras" class="mt-3 space-y-3.5 border-t border-border pt-3">`;
     sections.forEach((section, i) => {
       if(section.type === "note"){
-        const isDmo = section.text && section.text.indexOf("Do not proceed") >= 0;
-        if(isDmo){
-          html += `<p class="py-2 text-center text-[15px] font-bold text-danger">${esc(section.text)}</p>`;
-        } else {
-          html += `<p class="rounded-xl bg-primary-soft px-3 py-2 text-[13px] font-medium leading-snug text-primary">${esc(section.text)}</p>`;
-        }
+        html += `<p class="rounded-xl bg-primary-soft px-3 py-2 text-[13px] font-medium leading-snug text-primary">${esc(section.text)}</p>`;
       } else if(section.type === "checks"){
         html += `<fieldset>
           <legend class="mb-1.5 text-sm font-semibold">${esc(section.label)}</legend>
