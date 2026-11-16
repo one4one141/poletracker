@@ -481,7 +481,7 @@ function evaluateDecayWidths(extras){
     const label = DECAY_BAND_LABELS[b.key];
     if(value > b.max){
       result.overs.push({ key: b.key, label, value, max: b.max });
-      result.messages.push(label + " exceeds the maximum allowed measurements (max " + b.max + "mm).");
+      result.messages.push(label + " exceeds maximum allowed measurements (max " + b.max + "mm).");
     } else {
       result.withins.push({ key: b.key, label, value, max: b.max });
       result.messages.push(label + " is within allowed limits.");
@@ -734,10 +734,18 @@ function fieldControl(field){
   }
   const type = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
   const optTag = field.optional ? ` <span class="font-normal text-muted">(optional)</span>` : "";
+  let borderExtra = "";
+  if(field.key === "depth615" || field.key === "depth1530" || field.key === "depth30"){
+    const limits = decayLimitFor(state.extras.poleClass || "");
+    const numVal = value === "" ? null : Number(value);
+    if(limits && numVal !== null && !Number.isNaN(numVal) && numVal > limits[field.key]){
+      borderExtra = " border-fail-bd";
+    }
+  }
   return `<label class="block">
     <span class="mb-1.5 block text-sm font-semibold">${esc(field.label)}${optTag}</span>
     <span class="flex items-center gap-2">
-      <input class="field" type="${type}" value="${esc(value)}" data-extra="${esc(field.key)}"/>
+      <input class="field${borderExtra}" type="${type}" value="${esc(value)}" data-extra="${esc(field.key)}"/>
       ${field.unit ? `<span class="text-sm text-muted">${esc(field.unit)}</span>` : ""}
     </span>
     ${field.key === "ptw" ? `<span class="mt-1 block text-xs text-muted">Leave PTW ref blank for council owned land.</span>` : ""}
@@ -769,7 +777,7 @@ function decayFieldHint(key){
   const value = raw === undefined || raw === null || String(raw).trim() === "" ? null : Number(raw);
   if(value !== null && !Number.isNaN(value)){
     if(value > max){
-      return `<span class="decay-hint mt-1 block text-xs text-muted">Exceeds maximum (max ${max}mm) — comment can be generated</span>`;
+      return `<span class="decay-hint mt-1 block text-xs font-semibold text-fail-fg">Decay exceeds maximum allowed measurements (max ${max}mm) — comment can be generated</span>`;
     }
     return `<span class="decay-hint mt-1 block text-xs font-semibold text-pass-fg">Within allowed limits (max ${max}mm) — cannot generate comment</span>`;
   }
@@ -1200,20 +1208,24 @@ function bindEvents(){
             if(!limits){
               hint.textContent = "Select Pole Class to see maximum permitted width.";
               hint.className = "decay-hint mt-1 block text-xs text-muted";
+              el.classList.remove("border-fail-bd");
             } else {
               const max = limits[key];
               const value = el.value.trim() === "" ? null : Number(el.value);
               if(value !== null && !Number.isNaN(value)){
                 if(value > max){
-                  hint.textContent = "Exceeds maximum (max " + max + "mm) — comment can be generated";
-                  hint.className = "decay-hint mt-1 block text-xs text-muted";
+                  hint.textContent = "Decay exceeds maximum allowed measurements (max " + max + "mm) — comment can be generated";
+                  hint.className = "decay-hint mt-1 block text-xs font-semibold text-fail-fg";
+                  el.classList.add("border-fail-bd");
                 } else {
                   hint.textContent = "Within allowed limits (max " + max + "mm) — cannot generate comment";
                   hint.className = "decay-hint mt-1 block text-xs font-semibold text-pass-fg";
+                  el.classList.remove("border-fail-bd");
                 }
               } else {
                 hint.textContent = "Maximum permitted width: " + max + "mm";
                 hint.className = "decay-hint mt-1 block text-xs text-muted";
+                el.classList.remove("border-fail-bd");
               }
             }
           }
