@@ -110,7 +110,7 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.4.7";
+const APP_VERSION = "1.4.8";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
 
 // Maximum permitted WIDTH (mm) of external decay by pole class and depth band
@@ -343,6 +343,41 @@ function extraSections(testType, result, reason, extras){
 
 function visibleFields(sections){
   return sections.flatMap(s => s.type === "fields" ? s.fields : []);
+}
+
+/** Progressive disclosure: show one field at a time after Test Result / Reason.
+ *  Required fields block the next until filled; optional fields do not block.
+ *  Notes are shown when reached; checkbox groups block until at least one is ticked.
+ */
+function progressiveSections(sections, extras, locations){
+  const out = [];
+  let blocked = false;
+  for(const section of sections){
+    if(blocked) break;
+    if(section.type === "note"){
+      out.push(section);
+      continue;
+    }
+    if(section.type === "checks"){
+      out.push(section);
+      if(!locations || locations.length === 0) blocked = true;
+      continue;
+    }
+    if(section.type === "fields"){
+      const shown = [];
+      for(const f of section.fields){
+        shown.push(f);
+        const val = extras[f.key];
+        const empty = val === undefined || val === null || String(val).trim() === "";
+        if(empty && !f.optional){
+          blocked = true;
+          break;
+        }
+      }
+      if(shown.length) out.push({ type: "fields", fields: shown });
+    }
+  }
+  return out;
 }
 
 function up(v){ return (v||"").trim().toUpperCase(); }
@@ -1020,9 +1055,10 @@ function render(){
     `;
   }
 
-  if(sections.length > 0){
+  const shownSections = progressiveSections(sections, state.extras, state.locations);
+  if(shownSections.length > 0){
     html += `<div id="extras" class="mt-3 space-y-3.5 border-t border-border pt-3">`;
-    sections.forEach((section, i) => {
+    shownSections.forEach((section) => {
       if(section.type === "note"){
         html += `<p class="rounded-xl bg-primary-soft px-3 py-2 text-[13px] font-medium leading-snug text-primary">${esc(section.text)}</p>`;
       } else if(section.type === "checks"){
@@ -1263,8 +1299,8 @@ function bindEvents(){
           }
         }
       });
-      // On blur/change: re-render for decay fields so the red banner updates
-      el.addEventListener("change", () => setExtra(key, el.value, { rerender: isDecayWidth }));
+      // On blur/change: re-render so the next progressive field appears (and decay banner updates)
+      el.addEventListener("change", () => setExtra(key, el.value, { rerender: true }));
     }
   });
 
