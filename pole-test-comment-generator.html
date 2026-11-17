@@ -110,7 +110,7 @@ tailwind.config = {
 
 <script>
 // ========== APP META ==========
-const APP_VERSION = "1.4.4";
+const APP_VERSION = "1.4.7";
 const APP_VERSION_CHECK_URL = ""; // optional: set to a URL that returns plain text version e.g. "1.2.0"
 
 // Maximum permitted WIDTH (mm) of external decay by pole class and depth band
@@ -157,7 +157,7 @@ const FIELD_CONFIG = {
 
 const STAGE1_PASS = ["OK","Hollow Pole Corroded","Recovery Pole Defective","Hazard","D for Depth","Damage Move","Pole is Damaged","PIDOC (CAT 1)","PIDOC (CAT 2)","Danger of Collapse (CAT 3)","Pole Unstable"];
 const STAGE1_OTHER = STAGE1_PASS.filter(o => o !== "OK" && o !== "Hazard");
-const DEFAULT_RESULTS = ["Pole Decayed","Tested Not Climbed","Shallow Depth","Recovery Pole Defective","D for Depth","Unable to Repair Pole","Damage Move","PIDOC (CAT 1)","PIDOC (CAT 2)","Danger of Collapse (CAT 3)","Pole Dam Repair Poss","Pole Unstable"];
+const DEFAULT_RESULTS = ["Pole Decayed","Tested Not Climbed","Shallow Climbable","Shallow Depth","Recovery Pole Defective","D for Depth","Unable to Repair Pole","Damage Move","PIDOC (CAT 1)","PIDOC (CAT 2)","Danger of Collapse (CAT 3)","Pole Dam Repair Poss","Pole Unstable"];
 
 const REASON_OPTIONS = {
   "Incomplete": ["No Access - A108 Left","No Access - A108 Not Left","Tree Cutting Required","Traffic Lights Required","Tree and Traffic Required","Safety Issue","Low Wires","Other"],
@@ -166,6 +166,8 @@ const REASON_OPTIONS = {
 
 const SATURN = ["A","B","C","RT"];
 const COUNTS = ["0","1","2","3","4","5+"];
+const MAX_DW_A559 = ["1","2","3","4","5","6","7","8","9","10","11","12","13"];
+const POLE_CLASS_OPTS = ["Light or Extra Light","Medium","Stout"];
 
 function ta(key, label, optional=false){ return {key,label,kind:"textarea",optional}; }
 function num(key, label, unit="mm", optional=false){ return {key,label,kind:"number",unit,optional}; }
@@ -269,6 +271,15 @@ function extraSections(testType, result, reason, extras){
   if(result === "Shallow Depth"){
     return [{type:"fields", fields:[num("markHeight","3m mark height","cm")]}];
   }
+  if(result === "Shallow Climbable"){
+    return [{type:"fields", fields:[
+      sel("poleClass","Pole Class",POLE_CLASS_OPTS),
+      num("totalDw","Total DW Count","",false),
+      num("markHeight","3M Mark Height","cm"),
+      num("dwFullest180","DW in Fullest 180° Arc","",false),
+      sel("maxDwA559","Max DW on A559",MAX_DW_A559)
+    ]}];
+  }
   if(result === "Tested Not Climbed"){
     const fields = [sel("tncReason","Reason",["Only Sample Test Possible","Pole Top Congestion","Power Conflict","Other"])];
     if(extras.tncReason) fields.push(ta("details","Details"));
@@ -354,13 +365,32 @@ function buildComment(data){
     return parts.join(" ").trim();
   }
 
-  const pushTests = (keys) => {
+  // Shared test-line formatter used by every stage.
+  // Combines resistograph+drillPattern and dig+digType to match field comment style:
+  //   OVER 52Y RESI PASS / FULL DIG PASS etc.
+  const pushTests = () => {
     const bits = [];
-    const words = {visual:"VISUAL",hammer:"HAMMER",resistograph:"RESISTOGRAPH",dig:"DIG",climb:"CLIMB",drillPattern:"DRILL PATTERN",digType:"DIG TYPE"};
-    for(const k of keys){
-      const v = data.tests[k];
-      if(v) bits.push(`${words[k]} ${v.toUpperCase()}`);
+    const t = data.tests;
+    if(t.visual) bits.push("VISUAL " + t.visual.toUpperCase());
+    if(t.hammer) bits.push("HAMMER " + t.hammer.toUpperCase());
+    if(t.resistograph){
+      const dp = t.drillPattern || "";
+      const resi = t.resistograph.toUpperCase();
+      if(dp === ">52") bits.push("OVER 52Y RESI " + resi);
+      else if(dp === "0-52") bits.push("0-52 RESI " + resi);
+      else if(dp === "RA") bits.push("RA RESI " + resi);
+      else if(dp === "TNC") bits.push("TNC RESI " + resi);
+      else bits.push("RESISTOGRAPH " + resi);
     }
+    if(t.dig){
+      const dt = t.digType || "";
+      const dig = t.dig.toUpperCase();
+      if(dt === "Full") bits.push("FULL DIG " + dig);
+      else if(dt === "2/3") bits.push("2/3 DIG " + dig);
+      else if(dt === "TNC") bits.push("TNC DIG " + dig);
+      else bits.push("DIG " + dig);
+    }
+    if(t.climb) bits.push("CLIMB " + t.climb.toUpperCase());
     if(bits.length) parts.push(bits.join(". ")+".");
   };
 
@@ -376,12 +406,12 @@ function buildComment(data){
     if(extras.lowDropwires) parts.push("LOW DROPWIRES: "+extras.lowDropwires+".");
     if(extras.lowAerial) parts.push("LOW AERIAL CABLES: "+extras.lowAerial+".");
     if(extras.details) parts.push(up(extras.details)+".");
-    pushTests(["visual","hammer","resistograph","dig","climb"]);
+    pushTests();
     return parts.join(" ").replace(/\s+/g," ").replace(/\.\s*\./g,".").trim();
   }
 
   if(result === "OK"){
-    parts.push("OK.");
+    parts.push("POLE TESTED OK.");
   } else if(result === "Hollow Pole Corroded"){
     parts.push("HOLLOW POLE CORRODED.");
     if(extras.details) parts.push(up(extras.details)+".");
@@ -424,6 +454,16 @@ function buildComment(data){
   } else if(result === "Shallow Depth"){
     parts.push("SHALLOW DEPTH.");
     if(extras.markHeight) parts.push("3M MARK HEIGHT "+extras.markHeight+" CM.");
+  } else if(result === "Shallow Climbable"){
+    parts.push("SHALLOW CLIMBABLE.");
+    if(extras.poleClass === "Light or Extra Light") parts.push("L OR XL POLE.");
+    else if(extras.poleClass === "Medium") parts.push("MEDIUM POLE.");
+    else if(extras.poleClass === "Stout") parts.push("STOUT POLE.");
+    else if(extras.poleClass) parts.push(up(extras.poleClass)+".");
+    if(extras.markHeight) parts.push(extras.markHeight+"CM TO 3M MARK.");
+    if(extras.totalDw) parts.push(extras.totalDw+" TOTAL DW.");
+    if(extras.dwFullest180) parts.push(extras.dwFullest180+" DW IN FULLEST 180.");
+    if(extras.maxDwA559) parts.push("MAX DW ON A559 IS "+extras.maxDwA559+".");
   } else if(result === "Unable to Repair Pole"){
     parts.push("UNABLE TO REPAIR POLE.");
     if(extras.unableReason) parts.push(up(extras.unableReason)+".");
@@ -445,7 +485,7 @@ function buildComment(data){
     parts.push(up(result)+".");
   }
 
-  pushTests(["visual","hammer","resistograph","drillPattern","dig","digType","climb"]);
+  pushTests();
   return parts.join(" ").replace(/\s+/g," ").replace(/\.\s*\./g,".").trim();
 }
 
