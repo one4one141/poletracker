@@ -214,7 +214,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-14.5';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-17.1';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -400,11 +400,12 @@ const pageBase = () => location.href.split('#')[0].split('?')[0];
 async function checkUpdate(force) {
   if (!/^https?:$/.test(location.protocol)) return 'local';
   if (navigator.onLine === false) return 'offline';
-  if (!force && Date.now() - lastUpdCheck < 15000) return 'skip';
+  if (!force && Date.now() - lastUpdCheck < 10 * 60 * 1000) return 'skip';
   lastUpdCheck = Date.now();
   try {
     // unique query string + no-store: bypasses the phone's cache, the service worker cache and GitHub's CDN cache
-    const r = await fetch(pageBase() + '?_=' + Date.now(), { cache: 'no-store' });
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 12000);
+    const r = await fetch(pageBase() + '?_=' + Date.now(), { cache: 'no-store', signal: ctl.signal }); clearTimeout(to);
     if (!r.ok) return 'error';
     const m = (await r.text()).match(/APP_VERSION\s*=\s*'([^']+)'/);
     if (!m) return 'error';
@@ -1296,7 +1297,7 @@ async function openComGen() {
   if (document.getElementById('viewer')) return;
   let html = '';
   try {
-    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 6000);
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 3000);
     const r = await fetch(COMGEN_URL + '?_=' + Date.now(), { cache: 'no-store', signal: ctl.signal }); clearTimeout(to);
     if (r.ok) { const t = await r.text(); if (/<\/html>\s*$/i.test(t.trim()) && t.length > 2000) { html = t; try { localStorage.setItem('comGenHtml', t); } catch (e) {} } }
   } catch (e) {}
@@ -1756,10 +1757,14 @@ function outText() { const tm = tHours(); return `${Math.floor(tm / 60)}h ${tm %
     const m = { name: 'Pole Test Tracker', short_name: 'Pole Tracker', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#f3f7fa', theme_color: '#0b2a4a', icons: [{ src: c.toDataURL('image/png'), sizes: '180x180', type: 'image/png' }] };
     const ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' })); document.head.appendChild(ml);
   } catch (e) {}
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    // the service worker looks for a new version in the background and tells us, so there is no second download at launch
+    navigator.serviceWorker.onmessage = ev => { const d = ev.data; if (d && d.type === 'latest') { V.latest = d.version; if (d.version !== APP_VERSION && !V.update) { V.update = true; render(); } } };
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkUpdate(); if (!V.editor && !V.diaryDay) render(); } });
   window.addEventListener('online', () => checkUpdate(true));
-  setTimeout(() => checkUpdate(true), 1500);
+  setTimeout(() => { if (!(navigator.serviceWorker && navigator.serviceWorker.controller)) checkUpdate(true); }, 8000);
   window.addEventListener('focus', () => checkUpdate());
   window.addEventListener('pageshow', () => checkUpdate());
   setInterval(() => { if (!document.hidden) checkUpdate(); }, 5 * 60 * 1000);
