@@ -54,7 +54,7 @@ h3{font-size:16px;margin:0 0 8px}
 .weeknav .c{text-align:center;color:var(--text)} .weeknav .c b{display:block;font-size:17px}
 .day{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:13px;margin-bottom:8px;width:100%;border:0;text-align:left}
 .day .r{margin-left:auto;text-align:right}
-.daywrap{position:relative;margin-bottom:8px;border-radius:12px;overflow:hidden}.daywrap .day{margin-bottom:0;position:relative;touch-action:pan-y}
+.daywrap{position:relative;margin-bottom:8px;border-radius:12px;overflow:hidden}.daywrap .day{margin-bottom:0;position:relative;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .dayclear{position:absolute;inset:0;background:var(--red);color:#fff;font-weight:700;display:none;align-items:center;justify-content:flex-end;padding-right:20px;gap:8px}.daywrap.sw .dayclear{display:flex}
 .tabbar{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--tab) 86%,transparent);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .tabbar-in{display:flex;width:100%;max-width:600px}
@@ -203,6 +203,40 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 .devlink .dl-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .devlink .dl-t{flex:1;display:flex;flex-direction:column}.devlink .dl-t b{font-size:16px}.devlink .dl-t span{font-size:13px;color:var(--sub)}
 .devlink .dl-ch{color:var(--sub);font-size:22px}
+/* ---- top three: ring, live bar, motion ---- */
+.ringcard{display:flex;align-items:center;gap:18px;padding:18px}
+.ringwrap{position:relative;width:132px;height:132px;flex:none}.ringwrap svg{width:100%;height:100%;display:block}
+.ring-bg{fill:none;stroke:var(--card2);stroke-width:11}
+.ring-fg{fill:none;stroke-width:11;stroke-linecap:round;stroke-dasharray:var(--c);stroke-dashoffset:var(--o)}
+.enter .ring-fg{animation:ringIn .9s cubic-bezier(.2,.7,.2,1)}
+@keyframes ringIn{from{stroke-dashoffset:var(--c)}}
+.ringtxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringtxt b{font-size:22px;font-weight:800;letter-spacing:-.5px}.ringtxt span{font-size:11px;color:var(--sub);margin-top:1px}
+.ringstats{flex:1;min-width:0}.rs-state{font-weight:800;margin-bottom:8px}
+.rs{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}.rs span{color:var(--sub)}
+.sheet-top{position:sticky;top:0;z-index:2;background:var(--bg)}
+.sheet-top .sheet-head{position:static}
+.live{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 12px 10px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--card) 92%,var(--bg))}
+.live div{text-align:center}.live small{display:block;font-size:11px;color:var(--sub);font-weight:600}.live b{font-size:17px;font-weight:800}
+main.enter{animation:tabIn .28s ease-out}
+@keyframes tabIn{from{opacity:0;transform:translateY(10px)}}
+.sheet.enter{animation:sheetUp .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes sheetUp{from{opacity:0;transform:translateY(36px)}}
+.tile.pop{animation:tilePop .28s ease-out}
+@keyframes tilePop{0%{transform:scale(1)}45%{transform:scale(1.06)}100%{transform:scale(1)}}
+.celebrate{position:fixed;inset:0;z-index:300;pointer-events:none;overflow:hidden}
+.celebrate i{position:absolute;top:-14px;width:9px;height:14px;border-radius:2px;opacity:0;animation-name:confetti;animation-timing-function:ease-in;animation-fill-mode:forwards}
+@keyframes confetti{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:1;transform:translate(var(--dx),105vh) rotate(var(--r))}}
+.cel-msg{position:absolute;left:50%;top:30%;transform:translate(-50%,0);background:var(--grad);color:#fff;font-weight:800;font-size:20px;padding:14px 22px;border-radius:18px;box-shadow:0 12px 30px rgba(8,60,90,.35);white-space:nowrap;animation:celIn .5s cubic-bezier(.2,1.4,.4,1),celOut .4s 1.9s forwards}
+@keyframes celIn{from{opacity:0;transform:translate(-50%,16px) scale(.85)}}
+@keyframes celOut{to{opacity:0}}
+@media (prefers-reduced-motion:reduce){main.enter,.sheet.enter,.tile.pop,.enter .ring-fg{animation:none}.cel-msg{animation:none}}
+/* week page */
+.minichart{padding:10px 12px 6px}
+.wstrip{display:grid;grid-template-columns:repeat(3,1fr);padding:10px 8px;text-align:center}
+.wstrip div+div{border-left:1px solid var(--line)}.wstrip b{display:block;font-size:20px;font-weight:800}.wstrip small{color:var(--sub);font-size:12px}
+
+
 </style>
 </head>
 <body>
@@ -214,7 +248,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-17.1';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-18.6';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -365,7 +399,7 @@ function barChart(items, h = 150) {
   const y = v => top + plotH - (v / max) * plotH;
   let s = `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Performance chart">`;
   s += `<line x1="0" x2="${W}" y1="${y(target())}" y2="${y(target())}" stroke="#8e8e93" stroke-dasharray="4 3" stroke-width="1"/>`;
-  s += `<text x="${W - 2}" y="${y(target()) - 3}" text-anchor="end" style="font-size:9px">${Math.round(target() * 100)}%</text>`;
+  s += `<text x="2" y="${y(target()) - 3}" text-anchor="start" style="font-size:9px">${Math.round(target() * 100)}%</text>`;
   s += `<line x1="0" x2="${W}" y1="${top + plotH}" y2="${top + plotH}" stroke="#8e8e93" stroke-opacity=".5"/>`;
   items.forEach((it, i) => {
     const cx = slot * i + slot / 2;
@@ -437,6 +471,17 @@ const mkIcon = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"
 const CLOCK_ICON = mkIcon('<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.2l2.6 1.6M9.5 3h5"/>');
 const TREND_ICON = mkIcon('<path d="M3.5 17.5 9.5 11l4 4 7-8"/><path d="M15 7h5.5v5.5"/>');
 const weekMetrics = s => `<div class="grid3">${metric('Total Poles', s.poles, POLE_ICON)}${metric('Net Hours', hrs(s.net), CLOCK_ICON)}${metric('Performance', pct(s.perf), TREND_ICON, perfVar(s.perf))}</div>`;
+function ringCard(s) {
+  const C = 2 * Math.PI * 52, frac = s.perf == null ? 0 : Math.min(1, s.perf / target()), off = C * (1 - frac);
+  const state = s.perf == null ? 'No data yet' : s.perf >= target() ? 'On target 🎯' : s.perf >= amber() ? 'Close to target' : 'Below target';
+  return `<div class="card ringcard"><div class="ringwrap"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" cx="60" cy="60" r="52" style="--c:${C.toFixed(1)};--o:${off.toFixed(1)};stroke:${perfVar(s.perf)}" transform="rotate(-90 60 60)"/></svg>
+    <div class="ringtxt"><b class="mono" style="color:${perfVar(s.perf)}">${pct(s.perf)}</b><span>performance</span></div></div>
+    <div class="ringstats"><div class="rs-state" style="color:${perfVar(s.perf)}">${state}</div>
+      <div class="rs"><span>Total poles</span><b class="mono">${s.poles}</b></div>
+      <div class="rs"><span>Net hours</span><b class="mono">${hrs(s.net)}</b></div>
+      <div class="rs"><span>Budget hours</span><b class="mono">${hrs(s.budget)}</b></div>
+      <div class="rs"><span>Target</span><b class="mono">${Math.round(target() * 100)}%</b></div></div></div>`;
+}
 const chartCard = (t, inner) => `<div class="card"><h3>${t}</h3>${inner}</div>`;
 const sw = (id, checked, cls = '') => `<span class="switch ${cls}"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''}></span>`;
 
@@ -494,7 +539,7 @@ function homeView() {
     ${installDue() ? installBanner() : ''}
     ${reminderDue() ? `<div class="banner"><span>🔔 Don't forget to enter today's work.</span><button class="btn" data-act="enter-today">Enter</button></div>` : ''}
     <button class="hero" data-act="enter-today"><span class="big">⊕</span><div><b>${hasData(r) ? "Update today's work" : "Enter today's work"}</b><span>${fmt(t, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></div><span style="margin-left:auto">›</span></button>
-    <div><h2>This week</h2>${weekMetrics(s)}</div>
+    <div><h2>This week</h2>${ringCard(s)}</div>
     ${daily.some(d => d.value != null) ? chartCard('Daily performance', barChart(daily.map(d => ({ label: weekdayShort(d.date).charAt(0), value: d.value })))) : ''}
     ${trend.length >= 2 ? chartCard('Weekly trend (8 weeks)', lineChart(trend)) : ''}
     <div><h2>Quick access</h2>
@@ -508,12 +553,11 @@ function homeView() {
 
 function weekView() {
   const d = V.weekDate, s = weeklySummary(d), dates = weekDates(d), daily = dailyPerf(d);
-  return `<h1>Week</h1>
+  return `<div class="row between"><h1>Week</h1><button class="btn" data-act="week-today">Today</button></div>
   <div class="weeknav"><button class="iconbtn" data-act="week" data-n="-1">‹</button><div class="c"><b>${weekTitle(d)}</b><span class="sub small">Thursday – Wednesday</span></div><button class="iconbtn" data-act="week" data-n="1">›</button></div>
   <div class="stack">
-    <div class="row between"><span></span><button class="btn" data-act="week-today">Today</button></div>
-    ${weekMetrics(s)}
-    ${daily.some(x => x.value != null) ? chartCard('Daily performance', barChart(daily.map(x => ({ label: weekdayShort(x.date).charAt(0), value: x.value })), 110)) : ''}
+    <div class="wstrip card"><div><b class="mono">${s.poles}</b><small>Poles</small></div><div><b class="mono">${hrs(s.net)}</b><small>Net hrs</small></div><div><b class="mono" style="color:${perfVar(s.perf)}">${pct(s.perf)}</b><small>Performance</small></div></div>
+    ${daily.some(x => x.value != null) ? `<div class="card minichart"><div class="small sub" style="margin-bottom:2px">Daily performance</div>${barChart(daily.map(x => ({ label: weekdayShort(x.date).charAt(0), value: x.value })), 84)}</div>` : ''}
     <div>${dates.map(date => dayRow(date)).join('')}</div>
   </div>`;
 }
@@ -525,7 +569,7 @@ function dayRow(date) {
   else if (autoOff(date)) right = `<div><b class="sub">Day Off</b><div class="small sub">nothing entered</div></div>`;
   else right = `<span class="sub">Not entered</span>`;
   const has = hasData(r);
-  const row = `<div class="day" data-act="edit" data-key="${k}" role="button"><div><b>${fmt(date, { weekday: 'long' })}</b><div class="sub small">${dm(date)}</div></div><div class="r">${right}</div><span class="sub">›</span></div>`;
+  const row = `<div class="day" data-act="edit" data-key="${k}" role="button"><div class="dl"><b>${fmt(date, { weekday: 'long' })}</b><div class="sub small">${dm(date)}</div></div><div class="r">${right}</div><span class="sub">›</span></div>`;
   return has ? `<div class="daywrap" data-key="${k}"><div class="dayclear" aria-hidden="true">Clear day</div>${row}</div>` : `<div class="daywrap">${row}</div>`;
 }
 
@@ -572,7 +616,7 @@ function diaryDaySheet() {
     <div class="list-row"><span>Poles</span><b>${polesOf(r)}</b></div>
     <div class="list-row"><span>Performance</span><b style="color:${perfVar(perfOf(r))}">${pct(perfOf(r))}</b></div>`;
   else info = '<span class="sub">No work logged for this day.</span>';
-  return `<div class="sheet"><div class="sheet-in">
+  return `<div class="sheet ${animSheet === 'dd' ? 'enter' : ''}"><div class="sheet-in">
     <div class="sheet-head"><button data-act="diary-cancel">Cancel</button><b>${fmt(date, { weekday: 'long', day: 'numeric', month: 'long' })}</b><button data-act="diary-save"><b>Save</b></button></div>
     <div class="sheet-body stack">
       <div class="card">${info}<div style="margin-top:10px"><button class="btn" data-act="diary-edit">✎ ${r ? 'Edit' : 'Add'} hours &amp; pole work</button></div></div>
@@ -626,15 +670,25 @@ function tHours(e) {
   if (S.settings.calcLunch) d -= S.settings.lunch;
   return Math.max(0, d);
 }
+function liveWeek(e) {
+  let budget = edDraftBudget(e), net = Math.max(0, edNet(e));
+  if (e.dayOff) { budget = 0; net = 0; }
+  weekDates(parseKey(e.key)).forEach(x => { if (dayKey(x) === e.key) return; const r = rec(x); if (r) { budget += budgetH(r); net += netH(r); } });
+  return net > 0 ? budget / net : null;
+}
+function liveBar(e) {
+  if (e.dayOff) return '';
+  const p = edPerf(e), n = edNet(e), wp = liveWeek(e);
+  return `<div class="live" id="liveBar"><div><small>Poles</small><b class="mono">${edPoles(e)}</b></div><div><small>Net hrs</small><b class="mono">${n > 0 ? hrs(n, 2) : '–'}</b></div><div><small>Today</small><b class="mono" style="color:${perfVar(p)}">${pct(p)}</b></div><div><small>Week</small><b class="mono" style="color:${perfVar(wp)}">${pct(wp)}</b></div></div>`;
+}
 function editorView() {
   const e = V.editor, date = parseKey(e.key);
   const used = ALLTYPES.some(t => e.qty[t.name] > 0);
-  const tm = tHours(e), wk = weeklySummary(date);
-  return `<div class="sheet" id="edSheet"><div class="sheet-in">
-    <div class="sheet-head"><button data-act="ed-cancel">Cancel</button><b>Daily Work</b><button data-act="ed-save"><b>Save</b></button></div>
+  const tm = tHours(e);
+  return `<div class="sheet ${animSheet === 'ed' ? 'enter' : ''}" id="edSheet"><div class="sheet-in">
+    <div class="sheet-top"><div class="sheet-head"><button data-act="ed-cancel">Cancel</button><b>Daily Work</b><button data-act="ed-save"><b>Save</b></button></div>${liveBar(e)}</div>
     <div class="sheet-body stack">
-      <div class="card"><div class="row between"><b>📅 ${fmt(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</b><label class="row" style="gap:8px"><span>Day Off</span>${sw('edOff', e.dayOff)}</label></div>
-        <div class="small sub" style="margin-top:6px">Week performance (saved days): <b class="mono" style="color:${perfVar(wk.perf)}">${wk.perf == null ? '–' : pct(wk.perf)}</b></div></div>
+      <div class="card"><div class="row between"><b>📅 ${fmt(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</b><label class="row" style="gap:8px"><span>Day Off</span>${sw('edOff', e.dayOff)}</label></div></div>
       ${e.dayOff ? '' : `
       <div class="stack" style="gap:12px"><h2 style="margin:0">Hours</h2>
         <div class="grid2"><label class="field"><span>Working</span><input type="text" inputmode="decimal" id="edWorking" placeholder="e.g. 9.5" value="${esc(e.working)}"></label>
@@ -664,13 +718,14 @@ function editorView() {
 }
 function tile(e, t) {
   const n = e.qty[t.name] || 0, sel = n > 0;
-  return `<div class="tile ${sel ? 'sel' : ''}"><button class="name" data-act="tile" data-name="${esc(t.name)}">${esc(t.name)}</button><div class="min">${t.code ? esc(t.code) + ' · ' : ''}${minFor(e, t)} min</div>
+  return `<div class="tile ${sel ? 'sel' : ''} ${V.pop === t.name ? 'pop' : ''}"><button class="name" data-act="tile" data-name="${esc(t.name)}">${esc(t.name)}</button><div class="min">${t.code ? esc(t.code) + ' · ' : ''}${minFor(e, t)} min</div>
     ${sel ? `<div class="step"><button data-act="add" data-name="${esc(t.name)}" data-n="-1" aria-label="Remove one">−</button><b class="mono">${n}</b><button data-act="add" data-name="${esc(t.name)}" data-n="1" aria-label="Add one">+</button></div>` : ''}</div>`;
 }
 function edAdjust(name, d) {
   const e = V.editor; const v = Math.max(0, (e.qty[name] || 0) + d);
   if (v === 0) delete e.qty[name]; else e.qty[name] = v;
   if (d > 0 && navigator.vibrate) navigator.vibrate(8);
+  V.pop = d > 0 ? name : null;
   render();
 }
 function edCancel() {
@@ -689,8 +744,20 @@ function edSave() {
     if (dn > w) return alert("Downtime can't be more than working hours.");
   }
   const acts = e.dayOff ? [] : ALLTYPES.filter(t => e.qty[t.name] > 0).map(t => ({ typeName: t.name, quantity: e.qty[t.name], minutesEach: minFor(e, t), countsAsPole: t.countsAsPole }));
+  const wasWeek = weeklySummary(parseKey(e.key)).perf;
   saveDay(e.key, { actualHours: e.dayOff ? 0 : Math.max(0, w), downtimeHours: e.dayOff ? 0 : Math.max(0, dn), activities: acts, isDayOff: e.dayOff, isOvertime: e.overtime && !e.dayOff, comments: e.comments.trim() || null });
   V.editor = null; render();
+  if (!e.dayOff) { const dp = perfOf(S.days[e.key]), wp = weeklySummary(parseKey(e.key)).perf;
+    if (wp != null && wp >= target() && !(wasWeek != null && wasWeek >= target())) celebrate('Week on target! 🎉');
+  }
+}
+function celebrate(msg) {
+  const d = document.createElement('div'); d.className = 'celebrate'; d.setAttribute('role', 'status');
+  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let bits = ''; if (!calm) { const cols = ['#16b890', '#0b3b66', '#ffc233', '#ff7a59', '#7a4fd6', '#34e0b0']; for (let i = 0; i < 36; i++) bits += `<i style="left:${Math.random() * 100}%;background:${cols[i % cols.length]};--dx:${(Math.random() * 120 - 60).toFixed(0)}px;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;animation-delay:${(Math.random() * 0.35).toFixed(2)}s;animation-duration:${(1.3 + Math.random() * 0.8).toFixed(2)}s"></i>`; }
+  d.innerHTML = bits + `<div class="cel-msg">${msg}</div>`; document.body.appendChild(d);
+  try { navigator.vibrate && navigator.vibrate([20, 40, 20]); } catch (x) {}
+  setTimeout(() => d.remove(), 2600);
 }
 
 /* -------- reports */
@@ -845,7 +912,7 @@ function acc(id, title, summary, body, red) {
 function settingsView() {
   const s = S.settings, tm = tHours(), nm = Object.keys(S.days).length;
   const lastB = s.lastBackup ? new Date(s.lastBackup).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never';
-  const appearName = { system: 'Follow device', light: 'Light', dark: 'Dark' }[s.appearance] || 'Follow device';
+  const appearName = ({ system: 'Follow device', light: 'Light', dark: 'Dark' }[s.appearance] || 'Follow device');
   const who = [s.reportName.trim(), s.reportRoute.trim()].filter(Boolean).map(esc).join(' · ');
   const calc = `<div class="stack" style="gap:10px">
     <label class="row between">Start <input type="time" id="cStart" value="${hhmm(s.calcStart)}" style="width:auto"></label>
@@ -913,8 +980,11 @@ function tabbar() {
   const t = (id, l) => `<button class="tab ${V.tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}" aria-label="${l}" ${V.tab === id ? 'aria-current="page"' : ''}><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]}</svg></span>${l}</button>`;
   return `<nav class="tabbar"><div class="tabbar-in">${t('home', 'Home')}${t('week', 'Week')}${t('diary', 'Diary')}${t('export', 'Export')}${t('settings', 'Settings')}</div></nav>`;
 }
+let lastTabShown = null, lastSheetShown = '', animMain = false, animSheet = '';
 function render() {
   document.documentElement.dataset.theme = S.settings.appearance;
+  animMain = lastTabShown !== null && lastTabShown !== V.tab; lastTabShown = V.tab;
+  const sheetNow = V.editor ? 'ed' : V.diaryDay ? 'dd' : ''; animSheet = sheetNow && sheetNow !== lastSheetShown ? sheetNow : ''; lastSheetShown = sheetNow;
   const sy = window.scrollY, sheet = $('#edSheet'), ss = sheet ? sheet.scrollTop : 0;
   let body = '';
   switch (V.tab) {
@@ -931,10 +1001,11 @@ function render() {
     ${(V.editor.qty[V.menu.name] || 0) > 0 ? `<button class="btn danger block" data-act="add" data-name="${esc(V.menu.name)}" data-n="${-(V.editor.qty[V.menu.name] || 0)}" data-close="1">Remove all</button>` : ''}
     <button class="btn block" data-act="menu-close">Cancel</button></div></div>` : '';
   const upd = V.update && !V.updDismissed ? `<div class="updbar"><span>✨ A new version is available<small>Tap Update to get the latest improvements. Your data is kept.</small></span><button class="btn" data-act="app-update">Update</button><button class="x" data-act="app-update-dismiss" aria-label="Dismiss">✕</button></div>` : '';
-  $('#app').innerHTML = `<main>${upd}${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${V.installHelp ? installSheet() : ''}${canInstallHere() && !V.gateSkipped && !V.installHelp ? installGate() : ''}${toast}${menu}`;
+  $('#app').innerHTML = `<main class="${animMain ? 'enter' : ''}">${upd}${body}</main>${tabbar()}${V.editor ? editorView() : ''}${V.diaryDay ? diaryDaySheet() : ''}${V.installHelp ? installSheet() : ''}${canInstallHere() && !V.gateSkipped && !V.installHelp ? installGate() : ''}${toast}${menu}`;
   document.body.style.overflow = (canInstallHere() && !V.gateSkipped && !V.installHelp) ? 'hidden' : '';
   window.scrollTo(0, sy);
   const ns = $('#edSheet'); if (ns) ns.scrollTop = ss;
+  V.pop = null;
 }
 
 /* ------------------------------------------------------------------ file helpers */
@@ -1662,25 +1733,23 @@ document.addEventListener('click', ev => {
   }
 });
 
-/* swipe a day left (Week page) to clear it */
+/* swipe a day left (Week page) to clear it - touch events on phones (most reliable on iOS), pointer events for a mouse */
 (() => {
   let g = null;
-  document.addEventListener('pointerdown', ev => {
-    const w = ev.target.closest('.daywrap[data-key]'); if (!w || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
-    g = { w, day: w.querySelector('.day'), x: ev.clientX, y: ev.clientY, dx: 0, on: false, id: ev.pointerId };
-  });
-  document.addEventListener('pointermove', ev => {
-    if (!g || ev.pointerId !== g.id) return;
-    const dx = ev.clientX - g.x, dy = ev.clientY - g.y;
-    if (!g.on) { if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) { g.on = true; g.w.classList.add('sw'); try { g.day.setPointerCapture(ev.pointerId); } catch (e) {} } else if (Math.abs(dy) > 14) { g = null; return; } else return; }
+  const begin = (t, x, y, id) => { const w = t.closest && t.closest('.daywrap[data-key]'); if (!w) return; g = { w, day: w.querySelector('.day'), x, y, dx: 0, on: false, id }; };
+  const move = (x, y, ev) => {
+    if (!g) return;
+    const dx = x - g.x, dy = y - g.y;
+    if (!g.on) { if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) { g.on = true; g.w.classList.add('sw'); } else if (Math.abs(dy) > 12) { g = null; return; } else return; }
+    if (ev && ev.cancelable) ev.preventDefault();
     g.dx = Math.min(0, dx); g.day.style.transition = 'none'; g.day.style.transform = `translateX(${g.dx}px)`;
-  });
-  const end = ev => {
-    if (!g || ev.pointerId !== g.id) return;
+  };
+  const finish = ok => {
+    if (!g) return;
     const x = g, full = x.w.offsetWidth; g = null;
     if (!x.on) return;
     lastSwipe = Date.now();
-    const key = x.w.dataset.key, pass = ev.type === 'pointerup' && -x.dx > Math.min(110, full * 0.35);
+    const key = x.w.dataset.key, pass = ok && -x.dx > Math.min(110, full * 0.35);
     x.day.style.transition = 'transform .18s'; x.day.style.transform = pass ? `translateX(-${full}px)` : '';
     setTimeout(() => {
       x.day.style.transition = ''; x.day.style.transform = '';
@@ -1690,7 +1759,13 @@ document.addEventListener('click', ev => {
       render();
     }, pass ? 190 : 0);
   };
-  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+  document.addEventListener('touchstart', ev => { if (ev.touches.length === 1) begin(ev.target, ev.touches[0].clientX, ev.touches[0].clientY, 't'); else g = null; }, { passive: true });
+  document.addEventListener('touchmove', ev => { if (g && g.id === 't') move(ev.touches[0].clientX, ev.touches[0].clientY, ev); }, { passive: false });
+  document.addEventListener('touchend', () => { if (g && g.id === 't') finish(true); });
+  document.addEventListener('touchcancel', () => { if (g && g.id === 't') finish(false); });
+  document.addEventListener('pointerdown', ev => { if (ev.pointerType !== 'mouse' || ev.button !== 0) return; begin(ev.target, ev.clientX, ev.clientY, 'm'); });
+  document.addEventListener('pointermove', ev => { if (ev.pointerType === 'mouse' && g && g.id === 'm') move(ev.clientX, ev.clientY, null); });
+  document.addEventListener('pointerup', ev => { if (ev.pointerType === 'mouse' && g && g.id === 'm') finish(true); });
 })();
 
 /* long-press on pole tiles opens "Add 5 / Add 10 / Remove all" */
@@ -1706,6 +1781,7 @@ function updateDerived() {
   const e = V.editor; if (!e) return;
   const n = $('#needCard'); if (n) n.innerHTML = needCard(e);
   const p = $('#previewCard'); if (p) p.innerHTML = previewCard(e);
+  const l = $('#liveBar'); if (l) { const t = document.createElement('div'); t.innerHTML = liveBar(e); if (t.firstChild) l.innerHTML = t.firstChild.innerHTML; }
 }
 document.addEventListener('input', ev => {
   const t = ev.target, id = t.id, e = V.editor;
