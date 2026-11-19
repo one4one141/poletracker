@@ -248,7 +248,7 @@ main.enter{animation:tabIn .28s ease-out}
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-18.6';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-18.7';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -1087,7 +1087,11 @@ class Pdf {
     add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
     add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>');
     this.pages.forEach((ops, i) => {
-      const foot = `BT /F1 8 Tf ${rgbOf('#777777')} rg ${nf(this.W / 2 - strW(`Pole Test Tracker  ·  Page ${i + 1} of ${n}`, 8) / 2)} 22 Td (${pdfStr(`Pole Test Tracker  ·  Page ${i + 1} of ${n}`)}) Tj ET`;
+      const pg = `Page ${i + 1} of ${n}`, W = this.W, M = this.M;
+      let foot = `${rgbOf('#d5dde5')} RG 0.6 w ${nf(M)} 36 m ${nf(W - M)} 36 l S `;
+      foot += `BT /F1 8 Tf ${rgbOf('#7a8c9b')} rg ${nf(M)} 22 Td (Pole Test Tracker) Tj ET `;
+      foot += `BT /F1 8 Tf ${rgbOf('#7a8c9b')} rg ${nf(W - M - strW(pg, 8))} 22 Td (${pdfStr(pg)}) Tj ET`;
+      if (i > 0 && this.run) foot += ` ${rgbOf('#10b392')} rg 0 ${nf(this.H - 4)} ${nf(W)} 4 re f BT /F1 8 Tf ${rgbOf('#7a8c9b')} rg ${nf(M)} ${nf(this.H - 22)} Td (${pdfStr(this.run)}) Tj ET`;
       const content = ops.join('\n') + '\n' + foot;
       add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${nf(this.W)} ${nf(this.H)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents ${7 + i * 2} 0 R >>`);
       add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
@@ -1105,128 +1109,182 @@ function pdfDetails() {
   if (n) p.push('Name: ' + n); if (r) p.push('Employee number: ' + r);
   return p.join('   ·   ');
 }
+function pdfDetailParts() {
+  const n = S.settings.reportName.trim(), r = S.settings.reportRoute.trim(), p = [];
+  if (n) p.push('Name: ' + n); if (r) p.push('Employee number: ' + r);
+  return p;
+}
 function pdfTitle(doc, title, details, sub) {
-  doc.text(title, doc.M, doc.y + 18, 20, { bold: true }); doc.y += 28;
-  if (details) { doc.text(details, doc.M, doc.y + 10, 10, { color: '#666666' }); doc.y += 15; }
-  doc.text(sub, doc.M, doc.y + 11, 11, { bold: true }); doc.y += 20;
+  const W = doc.W, M = doc.M, band = 92; doc.run = title + '  ·  ' + sub;
+  doc.rect(0, 0, W, band, '#0b2a4a'); doc.rect(0, band, W, 3.5, '#10b392');
+  doc.rrect(M, 25, 40, 40, 9, '#10b392');                                   // logo tile with a pole glyph
+  doc.rect(M + 18.5, 30, 3, 30, '#ffffff'); doc.rect(M + 9, 36, 22, 2.6, '#ffffff'); doc.rect(M + 12, 44, 16, 2.6, '#ffffff');
+  const tx = M + 54;
+  doc.text(title, tx, 45, 19, { bold: true, color: '#ffffff' });
+  doc.text(sub, tx, 63, 11, { color: '#8be8d0' });
+  pdfDetailParts().forEach((t, k) => doc.text(t, W - M, 40 + k * 14, 9.5, { align: 'right', color: '#d6e4ef' }));
+  doc.text('Generated ' + generated(), W - M, 80, 8, { align: 'right', color: '#8fb0c8' });
+  doc.y = band + 3.5 + 18;
+}
+function pdfCard(doc, top, h, fill = '#ffffff') {
+  const W = doc.W - 2 * doc.M; doc.rrect(doc.M, top, W, h, 8, '#d9e2e9'); doc.rrect(doc.M + 0.8, top + 0.8, W - 1.6, h - 1.6, 7.3, fill);
+}
+function pdfHero(doc, perf, sub) {
+  const h = 80, x = doc.M, W = doc.W - 2 * doc.M; doc.ensure(h + 12);
+  pdfCard(doc, doc.y, h, '#f3f8fb');
+  const col = perfHex(perf), st = perf == null ? 'No data' : perf >= target() ? 'On target' : perf >= amber() ? 'Close to target' : 'Below target';
+  doc.text('PERFORMANCE', x + 16, doc.y + 20, 8, { bold: true, color: '#5a6e80' });
+  doc.text(pct(perf), x + 16, doc.y + 52, 30, { bold: true, color: col });
+  doc.text(st, x + 16, doc.y + 69, 9.5, { bold: true, color: col });
+  const bx = x + 200, bw = W - 200 - 18, by = doc.y + 38, bh = 10, full = target() * 1.2;
+  doc.text(sub, bx + bw, doc.y + 20, 8.5, { align: 'right', color: '#5a6e80' });
+  doc.rrect(bx, by, bw, bh, 5, '#dde6ed');
+  if (perf != null) doc.rrect(bx, by, Math.max(bh, Math.min(1, perf / full) * bw), bh, 5, col);
+  const tk = bx + target() / full * bw; doc.line(tk, by - 5, tk, by + bh + 5, '#0b2a4a', 1.2);
+  doc.text('Target ' + Math.round(target() * 100) + '%', tk, by - 9, 7.5, { bold: true, align: 'center', color: '#0b2a4a' });
+  doc.text('0%', bx, by + bh + 16, 7.5, { color: '#7a8c9b' });
+  doc.text(Math.round(full * 100) + '%+', bx + bw, by + bh + 16, 7.5, { align: 'right', color: '#7a8c9b' });
+  doc.y += h + 12;
 }
 function pdfTiles(doc, items) {
-  const gap = 8, w = (doc.W - 2 * doc.M - gap * (items.length - 1)) / items.length, h = 44; doc.ensure(h + 10);
+  const gap = 8, w = (doc.W - 2 * doc.M - gap * (items.length - 1)) / items.length, h = 46; doc.ensure(h + 10);
   items.forEach((it, i) => {
     const x = doc.M + i * (w + gap);
-    doc.rrect(x, doc.y, w, h, 6, '#f2f2f2');
-    doc.text(it.label.toUpperCase(), x + 9, doc.y + 14, 7, { bold: true, color: '#666666' });
-    doc.text(String(it.val), x + 9, doc.y + 34, 15, { bold: true, color: it.color || '#111111' });
+    doc.rrect(x, doc.y, w, h, 7, '#d9e2e9'); doc.rrect(x + 0.8, doc.y + 0.8, w - 1.6, h - 1.6, 6.3, '#ffffff');
+    doc.text(it.label.toUpperCase(), x + 10, doc.y + 16, 6.8, { bold: true, color: '#5a6e80' });
+    doc.text(String(it.val), x + 10, doc.y + 36, 15, { bold: true, color: it.color || '#0b2a4a' });
   });
   doc.y += h + 12;
 }
+function pdfSection(doc, title) {
+  doc.ensure(40); doc.y += 4;
+  doc.rrect(doc.M, doc.y + 1, 3.5, 13, 1.7, '#10b392');
+  doc.text(title, doc.M + 10, doc.y + 12, 12, { bold: true, color: '#0b2a4a' }); doc.y += 24;
+}
 function pdfBars(doc, title, items, h = 120) {
   if (!items.some(i => i.value != null)) return;
-  doc.ensure(h + 30); doc.text(title, doc.M, doc.y + 10, 11, { bold: true }); doc.y += 18;
-  const x0 = doc.M, W = doc.W - 2 * doc.M, top = doc.y + 14, plotH = h - 34;
+  const W = doc.W - 2 * doc.M, cardH = h + 36; doc.ensure(cardH + 12);
+  const cy = doc.y; pdfCard(doc, cy, cardH);
+  doc.text(title, doc.M + 14, cy + 21, 10.5, { bold: true, color: '#0b2a4a' });
+  doc.text('Dashed line = ' + Math.round(target() * 100) + '% target', doc.M + W - 14, cy + 21, 7.5, { align: 'right', color: '#7a8c9b' });
+  const x0 = doc.M + 14, PW = W - 28, top = cy + 36, plotH = h - 30;
   const max = Math.max(target() * 1.15, ...items.filter(i => i.value != null).map(i => i.value * 1.1));
-  const yv = v => top + plotH - (v / max) * plotH, slot = W / items.length, bw = Math.min(slot * 0.55, 46);
-  doc.line(x0, top + plotH, x0 + W, top + plotH, '#999999', 0.6);
-  doc.line(x0, yv(target()), x0 + W, yv(target()), '#8e8e93', 0.7, '3 2');
-  doc.text(Math.round(target() * 100) + '%', x0 + W, yv(target()) - 3, 7, { align: 'right', color: '#666666' });
+  const yv = v => top + plotH - (v / max) * plotH, slot = PW / items.length, bw = Math.min(slot * 0.55, 46);
+  doc.line(x0, top + plotH, x0 + PW, top + plotH, '#9aa8b5', 0.6);
+  doc.line(x0, yv(target()), x0 + PW, yv(target()), '#0b2a4a', 0.7, '3 2');
   items.forEach((it, i) => {
     const cx = x0 + slot * i + slot / 2;
     if (it.value != null) {
       const bh = Math.max(2, top + plotH - yv(it.value));
-      doc.rect(cx - bw / 2, top + plotH - bh, bw, bh, perfHex(it.value));
+      doc.rrect(cx - bw / 2, top + plotH - bh, bw, bh, 3, perfHex(it.value));
+      doc.rect(cx - 13, top + plotH - bh - 11.5, 26, 10, '#ffffff');
       doc.text((it.value * 100).toFixed(0) + '%', cx, top + plotH - bh - 3, 7.5, { bold: true, align: 'center', color: perfHex(it.value) });
     }
-    doc.text(it.label, cx, top + plotH + 12, 8, { align: 'center', color: '#555555' });
+    doc.text(it.label, cx, top + plotH + 12, 8, { align: 'center', color: '#5a6e80' });
   });
-  doc.y += h + 6;
+  doc.y = cy + cardH + 12;
 }
-// cols: [{h, w (fraction), align}], rows: arrays of string | {t, color, bold}
-function pdfTable(doc, cols, rows) {
-  const W = doc.W - 2 * doc.M, rh = 15, xs = []; let x = doc.M;
+// cols: [{h, w (fraction), align}], rows: arrays of string | {t, color, bold}; o: {x, W, gap}
+function pdfTable(doc, cols, rows, o = {}) {
+  const X = o.x ?? doc.M, W = o.W ?? (doc.W - 2 * doc.M), rh = 15, xs = []; let x = X;
   cols.forEach(c => { xs.push(x); x += c.w * W; });
   const head = () => {
-    doc.ensure(rh * 2);
-    cols.forEach((c, i) => doc.text(c.h, c.align === 'right' ? xs[i] + c.w * W - 5 : xs[i] + 5, doc.y + 11, 8.5, { bold: true, align: c.align === 'right' ? 'right' : 'left' }));
-    doc.line(doc.M, doc.y + rh, doc.M + W, doc.y + rh, '#999999', 0.6); doc.y += rh;
+    doc.ensure(rh * 2); doc.rect(X, doc.y, W, rh, '#e8f0f5');
+    cols.forEach((c, i) => doc.text(c.h, c.align === 'right' ? xs[i] + c.w * W - 5 : xs[i] + 5, doc.y + 10.5, 8, { bold: true, color: '#0b2a4a', align: c.align === 'right' ? 'right' : 'left' }));
+    doc.y += rh;
   };
   head();
   rows.forEach((r, ri) => {
     if (doc.y + rh > doc.H - doc.M - 14) { doc.newPage(); head(); }
-    if (ri % 2 === 1) doc.rect(doc.M, doc.y, W, rh, '#f2f2f2');
+    if (ri % 2 === 1) doc.rect(X, doc.y, W, rh, '#f5f8fa');
     r.forEach((cell, i) => {
       const c = typeof cell === 'object' ? cell : { t: cell };
       let t = String(c.t); const maxW = cols[i].w * W - 10;
       while (t.length > 1 && strW(t, 9, c.bold) > maxW) t = t.slice(0, -1);
       if (t !== String(c.t)) t = t.slice(0, -1) + '…';
-      doc.text(t, cols[i].align === 'right' ? xs[i] + cols[i].w * W - 5 : xs[i] + 5, doc.y + 11, 9, { bold: c.bold, color: c.color, align: cols[i].align === 'right' ? 'right' : 'left' });
+      doc.text(t, cols[i].align === 'right' ? xs[i] + cols[i].w * W - 5 : xs[i] + 5, doc.y + 11, 9, { bold: c.bold, color: c.color || '#1c2b3a', align: cols[i].align === 'right' ? 'right' : 'left' });
     });
     doc.y += rh;
   });
-  doc.y += 6;
+  doc.y += o.gap ?? 6;
 }
 function pdfNotes(doc, label, text) {
   const lines = doc.wrap((label ? label + ' ' : '') + text, doc.W - 2 * doc.M - 10, 9, false);
   lines.forEach(l => { doc.ensure(13); doc.text(l, doc.M + 5, doc.y + 10, 9, { italic: true, color: '#333333' }); doc.y += 12; });
   doc.y += 3;
 }
+// one card per day: coloured tab + name + poles, performance pill, hours line, notes, activity table
+function pdfDayCard(doc, r, date, withComments) {
+  const X = doc.M, W = doc.W - 2 * doc.M, P = 14, off = !!r.isDayOff;
+  const name = fmt(date, { weekday: 'long', day: 'numeric', month: 'short' });
+  const agg = {}; r.activities.forEach(a => { const g = agg[a.typeName] ||= { q: 0, b: 0, m: 0 }; g.q += a.quantity; g.b += actBudget(a); g.m = actMin(a); });
+  const names = Object.keys(agg).sort();
+  const notes = withComments && r.comments ? doc.wrap('Notes: ' + r.comments, W - 2 * P - 8, 9, false) : [];
+  const H = 32 + (off ? 0 : 17) + (notes.length ? notes.length * 12 + 5 : 0) + (names.length ? (names.length + 1) * 15 + 2 : 0) + 8;
+  doc.ensure(H + 10);
+  const top = doc.y, col = off ? '#9aa8b5' : perfHex(perfOf(r));
+  pdfCard(doc, top, H);
+  doc.rrect(X + 8, top + 9, 3.5, 17, 1.7, col);
+  const nw = doc.text(name, X + P + 6, top + 21, 11.5, { bold: true, color: '#0b2a4a' });
+  let nx = X + P + 6 + nw + 10;
+  if (!off) {
+    nx += doc.text(`${polesOf(r)} poles`, nx, top + 21, 9.5, { color: '#5a6e80' }) + 8;
+    if (r.isOvertime) { const ow = strW('OVERTIME', 6.5, true) + 10; doc.rrect(nx, top + 11, ow, 13, 6.5, '#8a2be2'); doc.text('OVERTIME', nx + ow / 2, top + 20.5, 6.5, { bold: true, align: 'center', color: '#ffffff' }); }
+  }
+  const pt = off ? 'DAY OFF' : pct(perfOf(r)), pw = strW(pt, 10, true) + 20;
+  doc.rrect(X + W - P - pw, top + 8, pw, 19, 9.5, col);
+  doc.text(pt, X + W - P - pw / 2, top + 21, 10, { bold: true, align: 'center', color: '#ffffff' });
+  let cy = top + 32;
+  if (!off) { doc.text(`Net ${hrs(netH(r), 2)} hrs (working ${hrs(r.actualHours, 2)}, downtime ${hrs(r.downtimeHours, 2)})  ·  Budget ${hrs(budgetH(r), 2)} hrs`, X + P + 6, cy + 9, 9, { color: '#5a6e80' }); cy += 17; }
+  notes.forEach(l => { doc.text(l, X + P + 6, cy + 9, 9, { italic: true, color: '#333333' }); cy += 12; });
+  if (notes.length) cy += 5;
+  if (names.length) {
+    doc.y = cy;
+    pdfTable(doc, [{ h: 'Activity', w: 0.5 }, { h: 'Qty', w: 0.1, align: 'right' }, { h: 'Min each', w: 0.18, align: 'right' }, { h: 'Budget hrs', w: 0.22, align: 'right' }], names.map(n => [n, String(agg[n].q), String(agg[n].m), hrs(agg[n].b, 2)]), { x: X + P, W: W - 2 * P, gap: 0 });
+  }
+  doc.y = top + H + 10;
+}
 
 function pdfWeek(date, withComments) {
   const doc = new Pdf(), dates = weekDates(date), s = weeklySummary(date);
   const ot = dates.filter(d => { const r = rec(d); return r && r.isOvertime && !r.isDayOff; }).length;
   pdfTitle(doc, 'Pole Performance Weekly Report', pdfDetails(), `Week: ${fmt(dates[0], { day: 'numeric', month: 'short', year: 'numeric' })} – ${fmt(dates[6], { day: 'numeric', month: 'short', year: 'numeric' })}`);
-  pdfTiles(doc, [{ label: 'Total poles', val: s.poles }, { label: 'Net hours', val: hrs(s.net, 2) }, { label: 'Budget hours', val: hrs(s.budget, 2) }, { label: 'Performance', val: pct(s.perf), color: perfHex(s.perf) }, { label: 'Overtime days', val: ot, color: '#8a2be2' }]);
-  pdfBars(doc, 'Daily performance', dates.map(d => ({ label: weekdayShort(d), value: rec(d) ? perfOf(rec(d)) : null })), 120);
-  let any = false;
-  dates.forEach(d => {
-    let r = rec(d); if (!hasData(r)) { if (!autoOff(d)) return; r = { isDayOff: true, activities: [], comments: null }; } any = true;
-    const name = fmt(d, { weekday: 'long', day: 'numeric', month: 'short' });
-    const agg = {}; r.activities.forEach(a => { const g = agg[a.typeName] ||= { q: 0, b: 0, m: 0 }; g.q += a.quantity; g.b += actBudget(a); g.m = actMin(a); });
-    const names = Object.keys(agg).sort();
-    doc.ensure(24 + 18 + 15 * Math.min(names.length + 1, 6) + 20);
-    doc.y += 6; doc.rect(doc.M, doc.y, doc.W - 2 * doc.M, 20, '#0b2a4a');
-    if (r.isDayOff) doc.text(`${name} — Day Off`, doc.M + 8, doc.y + 14, 11, { bold: true, color: '#ffffff' });
-    else {
-      doc.text(`${name} — ${polesOf(r)} poles${r.isOvertime ? '  ·  Overtime' : ''}`, doc.M + 8, doc.y + 14, 11, { bold: true, color: '#ffffff' });
-      const pt = pct(perfOf(r)), pw = strW(pt, 10, true) + 14;
-      doc.rrect(doc.W - doc.M - pw - 5, doc.y + 3, pw, 14, 7, '#ffffff');
-      doc.text(pt, doc.W - doc.M - 5 - pw / 2, doc.y + 13.5, 10, { bold: true, align: 'center', color: perfHex(perfOf(r)) });
-    }
-    doc.y += 24;
-    if (!r.isDayOff) { doc.text(`Net ${hrs(netH(r), 2)} hrs (working ${hrs(r.actualHours, 2)}, downtime ${hrs(r.downtimeHours, 2)})  ·  Budget ${hrs(budgetH(r), 2)} hrs`, doc.M + 5, doc.y + 8, 9, { color: '#666666' }); doc.y += 15; }
-    if (withComments && r.comments) pdfNotes(doc, 'Notes:', r.comments);
-    if (names.length) pdfTable(doc, [{ h: 'Activity', w: 0.5 }, { h: 'Qty', w: 0.1, align: 'right' }, { h: 'Min each', w: 0.18, align: 'right' }, { h: 'Budget hrs', w: 0.22, align: 'right' }], names.map(n => [n, String(agg[n].q), String(agg[n].m), hrs(agg[n].b, 2)]));
-  });
-  if (!any) doc.text('No entries recorded for this week.', doc.M, doc.y + 12, 10, { color: '#666666' });
-  doc.y += 14; doc.ensure(16); doc.text('Generated ' + generated(), doc.M, doc.y + 10, 8.5, { color: '#777777' });
+  pdfHero(doc, s.perf, `Budget ${hrs(s.budget, 2)} hrs  ÷  Net ${hrs(s.net, 2)} hrs`);
+  pdfTiles(doc, [{ label: 'Total poles', val: s.poles }, { label: 'Net hours', val: hrs(s.net, 2) }, { label: 'Budget hours', val: hrs(s.budget, 2) }, { label: 'Overtime days', val: ot, color: ot ? '#8a2be2' : '#0b2a4a' }]);
+  pdfBars(doc, 'Daily performance', dates.map(d => ({ label: weekdayShort(d), value: rec(d) ? perfOf(rec(d)) : null })), 112);
+  const list = [];
+  dates.forEach(d => { let r = rec(d); if (!hasData(r)) { if (!autoOff(d)) return; r = { isDayOff: true, activities: [], comments: null }; } list.push([r, d]); });
+  if (list.length) { pdfSection(doc, 'Daily breakdown'); list.forEach(([r, d]) => pdfDayCard(doc, r, d, withComments)); }
+  else doc.text('No entries recorded for this week.', doc.M, doc.y + 12, 10, { color: '#666666' });
   return doc.build();
 }
 function pdfMonth(md, withComments) {
   const doc = new Pdf(), dmf = d => fmt(d, { weekday: 'short', day: 'numeric', month: 'short' });
   pdfTitle(doc, 'Pole Performance Monthly Report', pdfDetails(), md.title);
-  pdfTiles(doc, [{ label: 'Total poles', val: md.poles }, { label: 'Net hours', val: hrs(md.net, 2) }, { label: 'Budget hours', val: hrs(md.budget, 2) }, { label: 'Performance', val: pct(md.perf), color: perfHex(md.perf) }, { label: 'Overtime days', val: md.ot.length, color: '#8a2be2' }]);
+  pdfHero(doc, md.perf, `${md.worked.length} day${md.worked.length === 1 ? '' : 's'} worked  ·  Budget ${hrs(md.budget, 2)} hrs  ÷  Net ${hrs(md.net, 2)} hrs`);
+  pdfTiles(doc, [{ label: 'Total poles', val: md.poles }, { label: 'Net hours', val: hrs(md.net, 2) }, { label: 'Budget hours', val: hrs(md.budget, 2) }, { label: 'Overtime days', val: md.ot.length, color: md.ot.length ? '#8a2be2' : '#0b2a4a' }]);
   pdfTiles(doc, [{ label: 'Days worked', val: md.worked.length }, { label: 'Days off', val: md.daysOff }, { label: 'Working hours', val: hrs(md.hours, 2) }, { label: 'Best week', val: pct(md.bestWeek?.perf), color: perfHex(md.bestWeek?.perf) }, { label: 'Worst week', val: pct(md.worstWeek?.perf), color: perfHex(md.worstWeek?.perf) }]);
-  pdfBars(doc, 'Weekly performance', md.weeks.filter(w => w.perf != null).map(w => ({ label: dm(w.start), value: w.perf })), 120);
+  pdfBars(doc, 'Weekly performance', md.weeks.filter(w => w.perf != null).map(w => ({ label: dm(w.start), value: w.perf })), 112);
   if (md.weeks.length) {
-    doc.ensure(60); doc.text('Weeks (Thursday – Wednesday, only days in this month)', doc.M, doc.y + 10, 11, { bold: true }); doc.y += 16;
+    pdfSection(doc, 'Weeks (Thursday – Wednesday, only days in this month)');
     pdfTable(doc, [{ h: 'Week starting', w: 0.25 }, { h: 'Days', w: 0.1, align: 'right' }, { h: 'Poles', w: 0.12, align: 'right' }, { h: 'Net hrs', w: 0.16, align: 'right' }, { h: 'Budget hrs', w: 0.18, align: 'right' }, { h: 'Performance', w: 0.19, align: 'right' }],
       md.weeks.map(w => [dmf(w.start), String(w.days), String(w.poles), hrs(w.net, 2), hrs(w.budget, 2), { t: pct(w.perf), bold: true, color: perfHex(w.perf) }]));
     if (md.weeks.length > 1 && md.bestWeek) { doc.ensure(14); doc.text(`Best week: starting ${dmf(md.bestWeek.start)} (${pct(md.bestWeek.perf)})   ·   Worst week: starting ${dmf(md.worstWeek.start)} (${pct(md.worstWeek.perf)})`, doc.M + 5, doc.y + 9, 9, { color: '#666666' }); doc.y += 13; }
     if (md.bestDay) { doc.ensure(14); doc.text(`Best day: ${dmf(recDate(md.bestDay))} (${pct(perfOf(md.bestDay))})   ·   Worst day: ${dmf(recDate(md.worstDay))} (${pct(perfOf(md.worstDay))})`, doc.M + 5, doc.y + 9, 9, { color: '#666666' }); doc.y += 16; }
   }
   if (md.acts.length) {
-    doc.ensure(60); doc.text('Activities', doc.M, doc.y + 10, 11, { bold: true }); doc.y += 16;
+    pdfSection(doc, 'Activities');
     pdfTable(doc, [{ h: 'Activity', w: 0.6 }, { h: 'Qty', w: 0.15, align: 'right' }, { h: 'Budget hrs', w: 0.25, align: 'right' }], md.acts.map(a => [a.name, String(a.qty), hrs(a.budget, 2)]));
   }
   if (md.ot.length) {
-    doc.ensure(40); doc.text(`Overtime days (${md.ot.length})`, doc.M, doc.y + 10, 11, { bold: true, color: '#8a2be2' }); doc.y += 17;
+    pdfSection(doc, `Overtime days (${md.ot.length})`);
     md.ot.forEach(r => { doc.ensure(14); doc.text(`${dmf(recDate(r))} — ${hrs(r.actualHours, 2)} hrs worked · ${polesOf(r)} poles · ${pct(perfOf(r))}`, doc.M + 5, doc.y + 9, 9.5); doc.y += 14; });
     doc.y += 6;
   }
   if (withComments && md.notes.length) {
-    doc.ensure(40); doc.text('Notes', doc.M, doc.y + 10, 11, { bold: true }); doc.y += 17;
+    pdfSection(doc, 'Notes');
     md.notes.forEach(r => pdfNotes(doc, dmf(recDate(r)) + ':', r.comments));
   }
-  doc.y += 8; doc.ensure(16); doc.text('Generated ' + generated(), doc.M, doc.y + 10, 8.5, { color: '#777777' });
   return doc.build();
 }
 function savePdf(bytes, name) {
