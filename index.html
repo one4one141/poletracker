@@ -2,7 +2,7 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pole Tracker">
@@ -22,6 +22,8 @@
 }
 :root[data-theme="dark"]{--bg:#07131f;--card:#0e2236;--card2:#153048;--text:#e8f1f7;--sub:#8fa6b8;--line:#1d3a54;--head:#eaf3f8;--tab:#0a1b2c;--brand:#2fd4a7;--brand2:#0e8f80;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body,button,a,label,summary,[role=button],.tile,.step,.day{touch-action:manipulation}
+input,select,textarea{font-size:max(16px,1em)}
 html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -248,7 +250,7 @@ main.enter{animation:tabIn .28s ease-out}
 'use strict';
 
 /* ------------------------------------------------------------------ config & data */
-const APP_VERSION = '2026-11-18.7';   // bump this on every release so installed copies show "update available"
+const APP_VERSION = '2026-11-20.1';   // bump this on every release so installed copies show "update available"
 const LS = 'poleTrackerV1';
 const WEEK_START_DOW = 4; // JS getDay(): Thursday = 4
 // Pole work types and minutes per pole
@@ -1791,6 +1793,10 @@ document.addEventListener('click', ev => {
   }
 });
 
+/* stop pinch zoom (iOS Safari ignores user-scalable); double-tap zoom is stopped by touch-action: manipulation */
+(() => {
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+})();
 /* swipe a day left (Week page) to clear it - touch events on phones (most reliable on iOS), pointer events for a mouse */
 (() => {
   let g = null;
